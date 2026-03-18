@@ -1,6 +1,7 @@
 .vscode/
 
 .env
+.env.prod
 
 *.log
 

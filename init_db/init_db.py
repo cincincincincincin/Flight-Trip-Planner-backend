@@ -91,8 +91,12 @@ def init_db():
                 filepath = os.path.join(dir_path, "init_data", filename)
                 print(f"Loading {filename}...")
                 with open(filepath, "r", encoding="utf-8") as f:
-                    data = f.read()
-                cur.execute(query, (data,))
+                    data_json = json.load(f)
+                
+                batch_size = 5000
+                for i in range(0, len(data_json), batch_size):
+                    batch = data_json[i:i + batch_size]
+                    cur.execute(query, (json.dumps(batch),))
 
             print("Executing 02_post_data_schema.sql...")
             with open(os.path.join(dir_path, "02_post_data_schema.sql"), "r", encoding="utf-8") as f:
