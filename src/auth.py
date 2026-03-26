@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # In-memory JWKS cache (TTL: 1 hour)
 _jwks_cache: Optional[dict] = None
 _jwks_fetched_at: float = 0.0
-JWKS_TTL_SECONDS = 3600
+JWKS_TTL_SECONDS = settings.supabase_jwks_ttl
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -38,7 +38,7 @@ async def _get_jwks() -> Optional[dict]:
 
     jwks_url = f"{settings.supabase_url}/auth/v1/.well-known/jwks.json"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        async with httpx.AsyncClient(timeout=settings.supabase_jwks_fetch_timeout) as client:
             resp = await client.get(jwks_url)
             resp.raise_for_status()
         _jwks_cache = resp.json()

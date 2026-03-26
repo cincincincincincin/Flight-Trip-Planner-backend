@@ -55,13 +55,13 @@ def init_db():
             print("Loading JSON data...")
             queries = [
                 ("countries.json", """
-                    INSERT INTO countries (code, name, name_translations, currency, cases)
-                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'currency', elem->'cases'
+                    INSERT INTO countries (code, name, name_translations, currency, wikipedia_link)
+                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'currency', elem->>'wikipedia_link'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
                 ("cities.json", """
-                    INSERT INTO cities (code, name, name_translations, country_code, time_zone, coordinates, has_flightable_airport, cases)
-                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'country_code', elem->>'time_zone', elem->'coordinates', COALESCE((elem->>'has_flightable_airport')::BOOLEAN, FALSE), elem->'cases'
+                    INSERT INTO cities (code, name, name_translations, country_code, time_zone, coordinates)
+                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'country_code', elem->>'time_zone', elem->'coordinates'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
                 ("airlines.json", """
@@ -70,21 +70,15 @@ def init_db():
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
                 ("airports.json", """
-                    INSERT INTO airports (code, name, name_translations, city_code, country_code, time_zone, coordinates, flightable, iata_type)
-                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'city_code', elem->>'country_code', elem->>'time_zone', elem->'coordinates', COALESCE((elem->>'flightable')::BOOLEAN, FALSE), elem->>'iata_type'
+                    INSERT INTO airports (code, name, name_translations, city_code, country_code, time_zone, coordinates, urls)
+                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'city_code', elem->>'country_code', elem->>'time_zone', elem->'coordinates', elem->'urls'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
-                ("planes.json", """
-                    INSERT INTO planes (code, name)
-                    SELECT elem->>'code', elem->>'name'
-                    FROM jsonb_array_elements(%s::jsonb) AS elem;
-                """),
-                ("routes.json", """
-                    INSERT INTO routes (airline_iata, airline_icao, departure_airport_iata, departure_airport_icao, arrival_airport_iata, arrival_airport_icao, codeshare, transfers, planes)
-                    SELECT NULLIF(TRIM(elem->>'airline_iata'), ''), NULLIF(TRIM(elem->>'airline_icao'), ''), NULLIF(TRIM(elem->>'departure_airport_iata'), ''), NULLIF(TRIM(elem->>'departure_airport_icao'), ''), NULLIF(TRIM(elem->>'arrival_airport_iata'), ''), NULLIF(TRIM(elem->>'arrival_airport_icao'), ''), COALESCE((elem->>'codeshare')::BOOLEAN, FALSE), COALESCE((elem->>'transfers')::INTEGER, 0), elem->'planes'
-                    FROM jsonb_array_elements(%s::jsonb) AS elem
-                    WHERE elem->>'airline_iata' IS NOT NULL OR elem->>'airline_icao' IS NOT NULL;
-                """)
+                # ("planes.json", """
+                #     INSERT INTO planes (code, name)
+                #     SELECT elem->>'code', elem->>'name'
+                #     FROM jsonb_array_elements(%s::jsonb) AS elem;
+                # """)
             ]
             
             for filename, query in queries:

@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Debug flag - set to False to disable debug logging
-DEBUG_API_CALLS = True
+DEBUG_API_CALLS = settings.debug_api_calls
 
 def debug_log(message: str):
     """Log debug message if DEBUG_API_CALLS is enabled"""
@@ -17,7 +17,7 @@ def debug_log(message: str):
 class AeroDataBoxClient:
     """Client for AeroDataBox API (flight schedules)"""
 
-    BASE_URL = "https://aerodatabox.p.rapidapi.com"
+    BASE_URL = settings.aerodatabox_base_url
 
     def __init__(self):
         self.api_key = settings.aerodatabox_api_key
@@ -68,7 +68,7 @@ class AeroDataBoxClient:
         debug_log(f"AeroDataBox API call: {url} with params: {params}")
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=settings.aerodatabox_timeout) as client:
                 response = await client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
                 if response.status_code == 204:
@@ -91,7 +91,7 @@ class AeroDataBoxClient:
 class AviasalesClient:
     """Client for Aviasales/Travelpayouts API (flight prices)"""
 
-    BASE_URL = "https://api.travelpayouts.com/aviasales/v3/prices_for_dates"
+    BASE_URL = settings.aviasales_base_url
 
     def __init__(self):
         self.api_token = settings.aviasales_api_token
@@ -135,7 +135,7 @@ class AviasalesClient:
         debug_log(f"Aviasales API call: {self.BASE_URL} with params: {params}")
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=settings.aviasales_timeout) as client:
                 response = await client.get(self.BASE_URL, params=params)
                 response.raise_for_status()
                 data = response.json()

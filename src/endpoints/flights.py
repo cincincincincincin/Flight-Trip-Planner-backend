@@ -13,6 +13,7 @@ from src.models.flight import (
     FlightPricesCacheInfo
 )
 from src.database import db
+from src.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/flights", tags=["flights"])
 
 
 @router.get("/airport/{airport_code}/info")
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_flights)
 async def get_airport_info(
     request: Request,
     airport_code: str = Path(..., description="IATA airport code")
@@ -70,14 +71,15 @@ async def get_airport_info(
 
 
 @router.get("/airport/{airport_code}", response_model=FlightsResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_flights)
 async def get_airport_flights(
     request: Request,
     airport_code: str = Path(..., description="IATA airport code (e.g., 'WAW')"),
     from_local_datetime: Optional[str] = Query(None, description="Start of 12h window in local airport time (YYYY-MM-DDTHH:MM:SS). If omitted, uses current time."),
     search_date: Optional[date] = Query(None, description="Fallback: date to search (uses midnight). Ignored if from_local_datetime is provided."),
     limit: int = Query(200, ge=1, le=500, description="Max results (default 200 for full 12h window)"),
-    force_refresh: bool = Query(False, description="Force refresh from API")
+    force_refresh: bool = Query(False, description="Force refresh from API"),
+    lang: str = Query('en', description="Language for localized city/airport names (en/pl)")
 ):
     """
     Get departing flights from airport for a 12h window starting at from_local_datetime.
@@ -100,7 +102,8 @@ async def get_airport_flights(
             from_local_datetime=parsed_from_dt,
             search_date=search_date,
             limit=limit,
-            force_refresh=force_refresh
+            force_refresh=force_refresh,
+            lang=lang
         )
     except HTTPException:
         raise
@@ -113,7 +116,7 @@ async def get_airport_flights(
 async def get_airport_cache_info(
     airport_code: str = Path(..., description="IATA airport code"),
     search_date: date = Query(default_factory=date.today, description="Date to check cache for"),
-    direction: str = Query("Departure", description="Flight direction: Departure, Arrival, or Both")
+    direction: str = Query(settings.default_flight_direction, description="Flight direction: Departure, Arrival, or Both")
 ):
     """
     Get cache information for airport flight schedules
@@ -175,13 +178,13 @@ async def refresh_airport_flights(
 
 
 @router.get("/offers/{origin_airport}/{destination_airport}", response_model=FlightOffersResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_flights)
 async def get_flight_offers(
     request: Request,
     origin_airport: str = Path(..., description="Origin airport IATA code"),
     destination_airport: str = Path(..., description="Destination airport IATA code"),
     departure_date: date = Query(default_factory=date.today, description="Departure date"),
-    currency: str = Query("PLN", description="Currency code: PLN, USD, EUR, GBP"),
+    currency: str = Query(settings.default_currency, description="Currency code: PLN, USD, EUR, GBP"),
     force_refresh: bool = Query(False, description="Force refresh from API")
 ):
     """
@@ -205,7 +208,7 @@ async def get_flight_offers(
 
 
 @router.get("/offers/city/{origin_city}/{destination_city}", response_model=FlightOffersResponse)
-@limiter.limit("30/minute")
+@limiter.limit(settings.rate_limit_flights)
 async def get_city_flight_offers(
     request: Request,
     origin_city: str = Path(..., description="Origin city IATA code"),

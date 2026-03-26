@@ -5,7 +5,8 @@
 
 -- 1. Usunięcie starych tabel
 DROP TABLE IF EXISTS flight_offers, flight_prices_cache, flights, airport_schedules_cache CASCADE;
-DROP TABLE IF EXISTS routes, airlines, airports, cities, countries, planes CASCADE;
+DROP TABLE IF EXISTS airlines, airports, cities, countries CASCADE;
+-- DROP TABLE IF EXISTS airlines, airports, cities, countries, planes CASCADE;
 
 -- 1.1 Kraje (z countries.json)
 CREATE TABLE countries (
@@ -13,7 +14,8 @@ CREATE TABLE countries (
     name VARCHAR(100) NOT NULL,
     name_translations JSONB,
     currency VARCHAR(3),
-    cases JSONB
+    wikipedia_link TEXT
+    -- cases JSONB
 );
 
 -- 1.2 Miasta (z cities.json)
@@ -23,9 +25,8 @@ CREATE TABLE cities (
     name_translations JSONB,
     country_code VARCHAR(2),
     time_zone VARCHAR(50),
-    coordinates JSONB,
-    has_flightable_airport BOOLEAN DEFAULT FALSE,
-    cases JSONB
+    coordinates JSONB
+    -- cases JSONB
 );
 
 -- 1.3 Linie lotnicze (z airlines.json)
@@ -45,29 +46,16 @@ CREATE TABLE airports (
     country_code VARCHAR(2),
     time_zone VARCHAR(50),
     coordinates JSONB,
-    flightable BOOLEAN DEFAULT FALSE,
-    iata_type VARCHAR(20)
+    urls JSONB
 );
 
 -- 1.5 Samoloty (z planes.json)
-CREATE TABLE planes (
-    code VARCHAR(10) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
-);
+-- CREATE TABLE planes (
+--     code VARCHAR(10) PRIMARY KEY,
+--     name VARCHAR(100) NOT NULL
+-- );
 
--- 1.6 Trasy (z routes.json)
-CREATE TABLE routes (
-    id SERIAL PRIMARY KEY,
-    airline_iata VARCHAR(3),
-    airline_icao VARCHAR(3),
-    departure_airport_iata VARCHAR(4),
-    departure_airport_icao VARCHAR(4),
-    arrival_airport_iata VARCHAR(4),
-    arrival_airport_icao VARCHAR(4),
-    codeshare BOOLEAN DEFAULT FALSE,
-    transfers INTEGER DEFAULT 0,
-    planes JSONB
-);
+      
 
 -- ============================================
 -- 1.7 TABELE DLA ZEWNĘTRZNYCH API
@@ -160,4 +148,11 @@ CREATE TABLE IF NOT EXISTS user_trips (
 
 CREATE INDEX IF NOT EXISTS idx_user_trips_user_id ON user_trips (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_trips_updated  ON user_trips (updated_at DESC);
+
+-- Preferencje użytkownika (język, styl mapy, kolory, rozmiary)
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id    TEXT PRIMARY KEY,
+    data       JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 

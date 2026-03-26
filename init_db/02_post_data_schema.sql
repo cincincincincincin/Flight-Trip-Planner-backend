@@ -1,11 +1,7 @@
 -- 3. CZYSZCZENIE DANYCH Z PROBLEMAMI
 -- ============================================
 
--- 3.1 Usuń lotniska z flightable = false ORAZ lotniska z typem innym niż 'airport' (ignorując NULL)
-DELETE FROM airports WHERE flightable = false OR (iata_type IS NOT NULL AND iata_type != 'airport');
-
--- 3.2 Usuń miasta z has_flightable_airport = false
-DELETE FROM cities WHERE has_flightable_airport = false;
+-- 3.1 Usunięcie zbednych wpisów (usunięto logikę flightable)
 
 -- 3.3 Usuń miasta z nieistniejącymi krajami
 DELETE FROM cities
@@ -17,11 +13,7 @@ DELETE FROM airports
 WHERE (city_code IS NOT NULL AND city_code NOT IN (SELECT code FROM cities))
    OR (country_code IS NOT NULL AND country_code NOT IN (SELECT code FROM countries));
 
--- 3.5 Usuń trasy z nieistniejącymi referencjami
-DELETE FROM routes
-WHERE (airline_iata IS NOT NULL AND airline_iata NOT IN (SELECT code FROM airlines))
-   OR (departure_airport_iata IS NOT NULL AND departure_airport_iata NOT IN (SELECT code FROM airports))
-   OR (arrival_airport_iata IS NOT NULL AND arrival_airport_iata NOT IN (SELECT code FROM airports));
+      
 
 -- ============================================
 -- 4. DODANIE KLUCZY OBCYCH
@@ -42,17 +34,7 @@ ADD CONSTRAINT fk_airports_country
 FOREIGN KEY (country_code) REFERENCES countries(code)
 ON DELETE CASCADE;
 
--- 4.3 Klucze obce dla tras
-ALTER TABLE routes
-ADD CONSTRAINT fk_routes_airline
-FOREIGN KEY (airline_iata) REFERENCES airlines(code)
-ON DELETE CASCADE,
-ADD CONSTRAINT fk_routes_departure_airport
-FOREIGN KEY (departure_airport_iata) REFERENCES airports(code)
-ON DELETE CASCADE,
-ADD CONSTRAINT fk_routes_arrival_airport
-FOREIGN KEY (arrival_airport_iata) REFERENCES airports(code)
-ON DELETE CASCADE;
+      
 
 -- 4.4 Klucze obce dla tabel API
 ALTER TABLE airport_schedules_cache
@@ -106,7 +88,6 @@ CREATE INDEX idx_countries_currency ON countries(currency);
 
 CREATE INDEX idx_cities_name ON cities(name);
 CREATE INDEX idx_cities_country ON cities(country_code);
-CREATE INDEX idx_cities_has_airport ON cities(has_flightable_airport);
 
 CREATE INDEX idx_airlines_name ON airlines(name);
 CREATE INDEX idx_airlines_lowcost ON airlines(is_lowcost);
@@ -114,19 +95,10 @@ CREATE INDEX idx_airlines_lowcost ON airlines(is_lowcost);
 CREATE INDEX idx_airports_name ON airports(name);
 CREATE INDEX idx_airports_city ON airports(city_code);
 CREATE INDEX idx_airports_country ON airports(country_code);
-CREATE INDEX idx_airports_type ON airports(iata_type);
-CREATE INDEX idx_airports_flightable ON airports(flightable);
 
-CREATE INDEX idx_planes_name ON planes(name);
+-- CREATE INDEX idx_planes_name ON planes(name);
 
-CREATE INDEX idx_routes_airline ON routes(airline_iata);
-CREATE INDEX idx_routes_departure ON routes(departure_airport_iata);
-CREATE INDEX idx_routes_arrival ON routes(arrival_airport_iata);
-CREATE INDEX idx_routes_codeshare ON routes(codeshare);
-CREATE INDEX idx_routes_transfers ON routes(transfers);
-
--- Indeksy dla zapytań JSON
-CREATE INDEX idx_routes_planes_gin ON routes USING gin(planes);
+      
 CREATE INDEX idx_countries_translations ON countries USING gin(name_translations);
 CREATE INDEX idx_cities_translations ON cities USING gin(name_translations);
 CREATE INDEX idx_airlines_translations ON airlines USING gin(name_translations);
@@ -163,35 +135,7 @@ CREATE INDEX idx_offers_transfers ON flight_offers(transfers);
 -- 6. WIDOKI DLA WYGODY
 -- ============================================
 
--- Widok z pełnymi danymi tras
-CREATE OR REPLACE VIEW routes_details AS
-SELECT
-    r.id,
-    a.name as airline_name,
-    r.airline_iata,
-    ap1.name as departure_airport,
-    ap1.code as departure_iata,
-    c1.name as departure_city,
-    co1.name as departure_country,
-    ap2.name as arrival_airport,
-    ap2.code as arrival_iata,
-    c2.name as arrival_city,
-    co2.name as arrival_country,
-    r.codeshare,
-    r.transfers,
-    r.planes,
-    ap1.coordinates as departure_coords,
-    ap2.coordinates as arrival_coords
-FROM routes r
-LEFT JOIN airlines a ON r.airline_iata = a.code
-LEFT JOIN airports ap1 ON r.departure_airport_iata = ap1.code
-LEFT JOIN cities c1 ON ap1.city_code = c1.code
-LEFT JOIN countries co1 ON ap1.country_code = co1.code
-LEFT JOIN airports ap2 ON r.arrival_airport_iata = ap2.code
-LEFT JOIN cities c2 ON ap2.city_code = c2.code
-LEFT JOIN countries co2 ON ap2.country_code = co2.code
-WHERE r.departure_airport_iata IS NOT NULL
-  AND r.arrival_airport_iata IS NOT NULL;
+      
 
 -- Widok lotnisk z miastem i krajem
 CREATE OR REPLACE VIEW airports_details AS
@@ -202,8 +146,6 @@ SELECT
     a.country_code,
     a.time_zone,
     a.coordinates,
-    a.flightable,
-    a.iata_type,
     c.name as city_name,
     co.name as country_name
 FROM airports a
@@ -218,16 +160,14 @@ SELECT
     c.country_code,
     c.time_zone,
     c.coordinates,
-    c.has_flightable_airport,
     co.name as country_name,
     co.currency,
-    COUNT(a.code) as airport_count,
-    SUM(CASE WHEN a.flightable THEN 1 ELSE 0 END) as flightable_airport_count
+    COUNT(a.code) as airport_count
 FROM cities c
 LEFT JOIN countries co ON c.country_code = co.code
 LEFT JOIN airports a ON c.code = a.city_code
 GROUP BY c.code, c.name, c.country_code, c.time_zone, c.coordinates,
-         c.has_flightable_airport, co.name, co.currency;
+         co.name, co.currency;
 
 -- Widok lotów z pełnymi danymi lotnisk
 CREATE OR REPLACE VIEW flights_details AS
@@ -302,15 +242,15 @@ DECLARE
     cities_count INTEGER;
     airports_count INTEGER;
     airlines_count INTEGER;
-    routes_count INTEGER;
-    planes_count INTEGER;
+      
+    -- planes_count INTEGER;
 BEGIN
     SELECT COUNT(*) INTO countries_count FROM countries;
     SELECT COUNT(*) INTO cities_count FROM cities;
     SELECT COUNT(*) INTO airports_count FROM airports;
     SELECT COUNT(*) INTO airlines_count FROM airlines;
-    SELECT COUNT(*) INTO routes_count FROM routes;
-    SELECT COUNT(*) INTO planes_count FROM planes;
+      
+    -- SELECT COUNT(*) INTO planes_count FROM planes;
 
     RAISE NOTICE '============================================';
     RAISE NOTICE 'STATYSTYKI PO CZYSZCZENIU:';
@@ -319,8 +259,8 @@ BEGIN
     RAISE NOTICE 'Miasta: %', cities_count;
     RAISE NOTICE 'Lotniska: %', airports_count;
     RAISE NOTICE 'Linie lotnicze: %', airlines_count;
-    RAISE NOTICE 'Trasy: %', routes_count;
-    RAISE NOTICE 'Samoloty: %', planes_count;
+      
+    -- RAISE NOTICE 'Samoloty: %', planes_count;
     RAISE NOTICE '============================================';
     RAISE NOTICE 'NOWE TABELE API:';
     RAISE NOTICE 'airport_schedules_cache: utworzona';
@@ -334,67 +274,7 @@ END $$;
 -- 8. FUNKCJE POMOCNICZE
 -- ============================================
 
--- Funkcja do sprawdzania, czy lotnisko ma trasy
-CREATE OR REPLACE FUNCTION airport_has_routes(airport_code VARCHAR)
-RETURNS BOOLEAN AS $$
-DECLARE
-    has_routes BOOLEAN;
-BEGIN
-    SELECT EXISTS (
-        SELECT 1 FROM routes
-        WHERE departure_airport_iata = airport_code
-           OR arrival_airport_iata = airport_code
-    ) INTO has_routes;
-
-    RETURN has_routes;
-END;
-$$ LANGUAGE plpgsql;
-
--- Funkcja do liczenia tras dla lotniska
-CREATE OR REPLACE FUNCTION count_airport_routes(airport_code VARCHAR)
-RETURNS INTEGER AS $$
-DECLARE
-    route_count INTEGER;
-BEGIN
-    SELECT COUNT(*) INTO route_count
-    FROM routes
-    WHERE departure_airport_iata = airport_code
-       OR arrival_airport_iata = airport_code;
-
-    RETURN route_count;
-END;
-$$ LANGUAGE plpgsql;
-
--- Funkcja do znajdowania tras między lotniskami
-CREATE OR REPLACE FUNCTION find_routes_between_airports(
-    departure_code VARCHAR,
-    arrival_code VARCHAR,
-    max_transfers INTEGER DEFAULT 0
-)
-RETURNS TABLE(
-    route_id INTEGER,
-    airline_iata VARCHAR,
-    departure_airport_iata VARCHAR,
-    arrival_airport_iata VARCHAR,
-    transfers INTEGER,
-    codeshare BOOLEAN
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        r.id,
-        r.airline_iata,
-        r.departure_airport_iata,
-        r.arrival_airport_iata,
-        r.transfers,
-        r.codeshare
-    FROM routes r
-    WHERE r.departure_airport_iata = departure_code
-      AND r.arrival_airport_iata = arrival_code
-      AND r.transfers <= max_transfers
-    ORDER BY r.transfers, r.codeshare;
-END;
-$$ LANGUAGE plpgsql;
+      
 
 -- Funkcja do sprawdzania czy są zcache'owane schedules dla lotniska i datetimem
 CREATE OR REPLACE FUNCTION has_cached_schedules(

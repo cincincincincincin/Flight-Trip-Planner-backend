@@ -11,11 +11,12 @@ from src.database import db
 from src.cache import cache
 from src.limiter import limiter
 from src.endpoints.airports import router as airports_router
-from src.endpoints.cities import router as cities_router
-from src.endpoints.routes import router as routes_router
+# from src.endpoints.cities import router as cities_router
+# from src.endpoints.routes import router as routes_router
 from src.endpoints.search import router as search_router
 from src.endpoints.flights import router as flights_router
 from src.endpoints.trips import router as trips_router
+from src.endpoints.preferences import router as preferences_router
 import logging
 
 # Configure logging
@@ -24,7 +25,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('debug.log', encoding='utf-8')
+        logging.FileHandler(settings.debug_log_file, encoding='utf-8')
     ]
 )
 
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
-    description="API for flight routes and airport mapping with real-time flight data",
+    description="API for flight trip planner app",
     version="1.0.0",
     lifespan=lifespan,
     debug=settings.debug,
@@ -108,11 +109,12 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(airports_router)
-app.include_router(cities_router)
-app.include_router(routes_router)
+# app.include_router(cities_router)
+# app.include_router(routes_router)
 app.include_router(search_router)
 app.include_router(flights_router)
 app.include_router(trips_router)
+app.include_router(preferences_router)
 
 
 @app.get("/")
@@ -124,10 +126,10 @@ async def root():
         "endpoints": {
             "airports": "/airports",
             "airports_geojson": "/airports/geojson",
-            "cities": "/cities",
-            "cities_geojson": "/cities/geojson",
-            "routes": "/routes",
-            "routes_geojson": "/routes/geojson",
+            # "cities": "/cities",
+            # "cities_geojson": "/cities/geojson",
+            # "routes": "/routes",
+            # "routes_geojson": "/routes/geojson",
             "search": "/search",
             "flights": "/flights",
             "trips": "/trips",

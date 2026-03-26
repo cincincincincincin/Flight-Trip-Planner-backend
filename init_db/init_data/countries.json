@@ -1,10 +1,8 @@
 [
   {
     "name_translations": {
-      "en": "Morocco"
-    },
-    "cases": {
-      "su": "Morocco"
+      "en": "Morocco",
+      "pl": "Maroko"
     },
     "code": "MA",
     "name": "Morocco",
@@ -13,10 +11,8 @@
   },
   {
     "name_translations": {
-      "en": "Belgium"
-    },
-    "cases": {
-      "su": "Belgium"
+      "en": "Belgium",
+      "pl": "Belgia"
     },
     "code": "BE",
     "name": "Belgium",
@@ -25,10 +21,8 @@
   },
   {
     "name_translations": {
-      "en": "Saudi Arabia"
-    },
-    "cases": {
-      "su": "Saudi Arabia"
+      "en": "Saudi Arabia",
+      "pl": "Arabia Saudyjska"
     },
     "code": "SA",
     "name": "Saudi Arabia",
@@ -37,10 +31,8 @@
   },
   {
     "name_translations": {
-      "en": "Uzbekistan"
-    },
-    "cases": {
-      "su": "Uzbekistan"
+      "en": "Uzbekistan",
+      "pl": "Uzbekistan"
     },
     "code": "UZ",
     "name": "Uzbekistan",
@@ -49,10 +41,8 @@
   },
   {
     "name_translations": {
-      "en": "Liberia"
-    },
-    "cases": {
-      "su": "Liberia"
+      "en": "Liberia",
+      "pl": "Liberia"
     },
     "code": "LR",
     "name": "Liberia",
@@ -61,10 +51,8 @@
   },
   {
     "name_translations": {
-      "en": "Dominica"
-    },
-    "cases": {
-      "su": "Dominica"
+      "en": "Dominica",
+      "pl": "Dominika"
     },
     "code": "DM",
     "name": "Dominica",
@@ -73,10 +61,8 @@
   },
   {
     "name_translations": {
-      "en": "Svalbard and Jan Mayen"
-    },
-    "cases": {
-      "su": "Svalbard and Jan Mayen"
+      "en": "Svalbard and Jan Mayen",
+      "pl": "Svalbard i Jan Mayen"
     },
     "code": "SJ",
     "name": "Svalbard and Jan Mayen",
@@ -85,10 +71,8 @@
   },
   {
     "name_translations": {
-      "en": "Myanmar"
-    },
-    "cases": {
-      "su": "Myanmar"
+      "en": "Myanmar",
+      "pl": "Mjanma (Birma)"
     },
     "code": "MM",
     "name": "Myanmar",
@@ -97,10 +81,8 @@
   },
   {
     "name_translations": {
-      "en": "Lesotho"
-    },
-    "cases": {
-      "su": "Lesotho"
+      "en": "Lesotho",
+      "pl": "Lesotho"
     },
     "code": "LS",
     "name": "Lesotho",
@@ -109,10 +91,8 @@
   },
   {
     "name_translations": {
-      "en": "Honduras"
-    },
-    "cases": {
-      "su": "Honduras"
+      "en": "Honduras",
+      "pl": "Honduras"
     },
     "code": "HN",
     "name": "Honduras",
@@ -121,10 +101,8 @@
   },
   {
     "name_translations": {
-      "en": "Hong Kong"
-    },
-    "cases": {
-      "su": "Hong Kong"
+      "en": "Hong Kong",
+      "pl": "Hongkong"
     },
     "code": "HK",
     "name": "Hong Kong",
@@ -133,10 +111,8 @@
   },
   {
     "name_translations": {
-      "en": "Moldova"
-    },
-    "cases": {
-      "su": "Moldova"
+      "en": "Moldova",
+      "pl": "Mołdawia"
     },
     "code": "MD",
     "name": "Moldova",
@@ -145,10 +121,8 @@
   },
   {
     "name_translations": {
-      "en": "United Kingdom"
-    },
-    "cases": {
-      "su": "United Kingdom"
+      "en": "United Kingdom",
+      "pl": "Wielka Brytania"
     },
     "code": "GB",
     "name": "United Kingdom",
@@ -157,10 +131,8 @@
   },
   {
     "name_translations": {
-      "en": "Pakistan"
-    },
-    "cases": {
-      "su": "Pakistan"
+      "en": "Pakistan",
+      "pl": "Pakistan"
     },
     "code": "PK",
     "name": "Pakistan",
@@ -169,10 +141,8 @@
   },
   {
     "name_translations": {
-      "en": "Tuvalu"
-    },
-    "cases": {
-      "su": "Tuvalu"
+      "en": "Tuvalu",
+      "pl": "Tuvalu"
     },
     "code": "TV",
     "name": "Tuvalu",
@@ -181,10 +151,8 @@
   },
   {
     "name_translations": {
-      "en": "Mexico"
-    },
-    "cases": {
-      "su": "Mexico"
+      "en": "Mexico",
+      "pl": "Meksyk"
     },
     "code": "MX",
     "name": "Mexico",
@@ -193,10 +161,8 @@
   },
   {
     "name_translations": {
-      "en": "Angola"
-    },
-    "cases": {
-      "su": "Angola"
+      "en": "Angola",
+      "pl": "Angola"
     },
     "code": "AO",
     "name": "Angola",
@@ -205,10 +171,8 @@
   },
   {
     "name_translations": {
-      "en": "South Sudan"
-    },
-    "cases": {
-      "su": "South Sudan"
+      "en": "South Sudan",
+      "pl": "Sudan Południowy"
     },
     "code": "SS",
     "name": "South Sudan",
@@ -217,10 +181,8 @@
   },
   {
     "name_translations": {
-      "en": "Malta"
-    },
-    "cases": {
-      "su": "Malta"
+      "en": "Malta",
+      "pl": "Malta"
     },
     "code": "MT",
     "name": "Malta",
@@ -229,10 +191,8 @@
   },
   {
     "name_translations": {
-      "en": "Algeria"
-    },
-    "cases": {
-      "su": "Algeria"
+      "en": "Algeria",
+      "pl": "Algieria"
     },
     "code": "DZ",
     "name": "Algeria",
@@ -241,10 +201,8 @@
   },
   {
     "name_translations": {
-      "en": "French Guiana"
-    },
-    "cases": {
-      "su": "French Guiana"
+      "en": "French Guiana",
+      "pl": "Gujana Francuska"
     },
     "code": "GF",
     "name": "French Guiana",
@@ -253,10 +211,8 @@
   },
   {
     "name_translations": {
-      "en": "Faroe Islands"
-    },
-    "cases": {
-      "su": "Faroe Islands"
+      "en": "Faroe Islands",
+      "pl": "Wyspy Owcze"
     },
     "code": "FO",
     "name": "Faroe Islands",
@@ -265,10 +221,8 @@
   },
   {
     "name_translations": {
-      "en": "Mozambique"
-    },
-    "cases": {
-      "su": "Mozambique"
+      "en": "Mozambique",
+      "pl": "Mozambik"
     },
     "code": "MZ",
     "name": "Mozambique",
@@ -277,10 +231,8 @@
   },
   {
     "name_translations": {
-      "en": "Sweden"
-    },
-    "cases": {
-      "su": "Sweden"
+      "en": "Sweden",
+      "pl": "Szwecja"
     },
     "code": "SE",
     "name": "Sweden",
@@ -289,10 +241,8 @@
   },
   {
     "name_translations": {
-      "en": "British Virgin Islands"
-    },
-    "cases": {
-      "su": "British Virgin Islands"
+      "en": "British Virgin Islands",
+      "pl": "Brytyjskie Wyspy Dziewicze"
     },
     "code": "VG",
     "name": "British Virgin Islands",
@@ -301,10 +251,8 @@
   },
   {
     "name_translations": {
-      "en": "Montenegro"
-    },
-    "cases": {
-      "su": "Montenegro"
+      "en": "Montenegro",
+      "pl": "Czarnogóra"
     },
     "code": "ME",
     "name": "Montenegro",
@@ -313,10 +261,8 @@
   },
   {
     "name_translations": {
-      "en": "Cayman Islands"
-    },
-    "cases": {
-      "su": "Cayman Islands"
+      "en": "Cayman Islands",
+      "pl": "Kajmany"
     },
     "code": "KY",
     "name": "Cayman Islands",
@@ -325,10 +271,8 @@
   },
   {
     "name_translations": {
-      "en": "Laos"
-    },
-    "cases": {
-      "su": "Laos"
+      "en": "Laos",
+      "pl": "Laos"
     },
     "code": "LA",
     "name": "Laos",
@@ -337,10 +281,8 @@
   },
   {
     "name_translations": {
-      "en": "Rwanda"
-    },
-    "cases": {
-      "su": "Rwanda"
+      "en": "Rwanda",
+      "pl": "Rwanda"
     },
     "code": "RW",
     "name": "Rwanda",
@@ -349,10 +291,8 @@
   },
   {
     "name_translations": {
-      "en": "French Polynesia"
-    },
-    "cases": {
-      "su": "French Polynesia"
+      "en": "French Polynesia",
+      "pl": "Polinezja Francuska"
     },
     "code": "PF",
     "name": "French Polynesia",
@@ -361,10 +301,8 @@
   },
   {
     "name_translations": {
-      "en": "Bosnia and Herzegovina"
-    },
-    "cases": {
-      "su": "Bosnia and Herzegovina"
+      "en": "Bosnia and Herzegovina",
+      "pl": "Bośnia i Hercegowina"
     },
     "code": "BA",
     "name": "Bosnia and Herzegovina",
@@ -373,10 +311,8 @@
   },
   {
     "name_translations": {
-      "en": "Cuba"
-    },
-    "cases": {
-      "su": "Cuba"
+      "en": "Cuba",
+      "pl": "Kuba"
     },
     "code": "CU",
     "name": "Cuba",
@@ -385,10 +321,8 @@
   },
   {
     "name_translations": {
-      "en": "Malaysia"
-    },
-    "cases": {
-      "su": "Malaysia"
+      "en": "Malaysia",
+      "pl": "Malezja"
     },
     "code": "MY",
     "name": "Malaysia",
@@ -397,10 +331,8 @@
   },
   {
     "name_translations": {
-      "en": "East Timor"
-    },
-    "cases": {
-      "su": "East Timor"
+      "en": "East Timor",
+      "pl": "Timor Wschodni"
     },
     "code": "TL",
     "name": "East Timor",
@@ -409,10 +341,8 @@
   },
   {
     "name_translations": {
-      "en": "Tanzania"
-    },
-    "cases": {
-      "su": "Tanzania"
+      "en": "Tanzania",
+      "pl": "Tanzania"
     },
     "code": "TZ",
     "name": "Tanzania",
@@ -421,10 +351,8 @@
   },
   {
     "name_translations": {
-      "en": "Ivory Coast"
-    },
-    "cases": {
-      "su": "Ivory Coast"
+      "en": "Ivory Coast",
+      "pl": "Wybrzeże Kości Słoniowej"
     },
     "code": "CI",
     "name": "Ivory Coast",
@@ -433,10 +361,8 @@
   },
   {
     "name_translations": {
-      "en": "Slovakia"
-    },
-    "cases": {
-      "su": "Slovakia"
+      "en": "Slovakia",
+      "pl": "Słowacja"
     },
     "code": "SK",
     "name": "Slovakia",
@@ -445,10 +371,8 @@
   },
   {
     "name_translations": {
-      "en": "Uganda"
-    },
-    "cases": {
-      "su": "Uganda"
+      "en": "Uganda",
+      "pl": "Uganda"
     },
     "code": "UG",
     "name": "Uganda",
@@ -457,10 +381,8 @@
   },
   {
     "name_translations": {
-      "en": "El Salvador"
-    },
-    "cases": {
-      "su": "El Salvador"
+      "en": "El Salvador",
+      "pl": "Salwador"
     },
     "code": "SV",
     "name": "El Salvador",
@@ -469,10 +391,8 @@
   },
   {
     "name_translations": {
-      "en": "Curaçao"
-    },
-    "cases": {
-      "su": "Curaçao"
+      "en": "Curaçao",
+      "pl": "Curaçao"
     },
     "code": "CW",
     "name": "Curaçao",
@@ -481,10 +401,8 @@
   },
   {
     "name_translations": {
-      "en": "Grenada"
-    },
-    "cases": {
-      "su": "Grenada"
+      "en": "Grenada",
+      "pl": "Grenada"
     },
     "code": "GD",
     "name": "Grenada",
@@ -493,10 +411,8 @@
   },
   {
     "name_translations": {
-      "en": "Papua New Guinea"
-    },
-    "cases": {
-      "su": "Papua New Guinea"
+      "en": "Papua New Guinea",
+      "pl": "Papua-Nowa Gwinea"
     },
     "code": "PG",
     "name": "Papua New Guinea",
@@ -505,10 +421,8 @@
   },
   {
     "name_translations": {
-      "en": "Brunei"
-    },
-    "cases": {
-      "su": "Brunei"
+      "en": "Brunei",
+      "pl": "Brunei Darussalam"
     },
     "code": "BN",
     "name": "Brunei",
@@ -517,10 +431,8 @@
   },
   {
     "name_translations": {
-      "en": "Iran"
-    },
-    "cases": {
-      "su": "Iran"
+      "en": "Iran",
+      "pl": "Iran"
     },
     "code": "IR",
     "name": "Iran",
@@ -529,10 +441,8 @@
   },
   {
     "name_translations": {
-      "en": "Ireland"
-    },
-    "cases": {
-      "su": "Ireland"
+      "en": "Ireland",
+      "pl": "Irlandia"
     },
     "code": "IE",
     "name": "Ireland",
@@ -541,10 +451,8 @@
   },
   {
     "name_translations": {
-      "en": "Sri Lanka"
-    },
-    "cases": {
-      "su": "Sri Lanka"
+      "en": "Sri Lanka",
+      "pl": "Sri Lanka"
     },
     "code": "LK",
     "name": "Sri Lanka",
@@ -553,10 +461,8 @@
   },
   {
     "name_translations": {
-      "en": "Micronesia"
-    },
-    "cases": {
-      "su": "Micronesia"
+      "en": "Micronesia",
+      "pl": "Mikronezja"
     },
     "code": "FM",
     "name": "Micronesia",
@@ -565,10 +471,8 @@
   },
   {
     "name_translations": {
-      "en": "Iceland"
-    },
-    "cases": {
-      "su": "Iceland"
+      "en": "Iceland",
+      "pl": "Islandia"
     },
     "code": "IS",
     "name": "Iceland",
@@ -577,10 +481,8 @@
   },
   {
     "name_translations": {
-      "en": "Mauritius"
-    },
-    "cases": {
-      "su": "Mauritius"
+      "en": "Mauritius",
+      "pl": "Mauritius"
     },
     "code": "MU",
     "name": "Mauritius",
@@ -589,10 +491,8 @@
   },
   {
     "name_translations": {
-      "en": "Brazil"
-    },
-    "cases": {
-      "su": "Brazil"
+      "en": "Brazil",
+      "pl": "Brazylia"
     },
     "code": "BR",
     "name": "Brazil",
@@ -601,10 +501,8 @@
   },
   {
     "name_translations": {
-      "en": "Eritrea"
-    },
-    "cases": {
-      "su": "Eritrea"
+      "en": "Eritrea",
+      "pl": "Erytrea"
     },
     "code": "ER",
     "name": "Eritrea",
@@ -613,10 +511,8 @@
   },
   {
     "name_translations": {
-      "en": "Kazakhstan"
-    },
-    "cases": {
-      "su": "Kazakhstan"
+      "en": "Kazakhstan",
+      "pl": "Kazachstan"
     },
     "code": "KZ",
     "name": "Kazakhstan",
@@ -625,10 +521,8 @@
   },
   {
     "name_translations": {
-      "en": "Argentina"
-    },
-    "cases": {
-      "su": "Argentina"
+      "en": "Argentina",
+      "pl": "Argentyna"
     },
     "code": "AR",
     "name": "Argentina",
@@ -637,10 +531,8 @@
   },
   {
     "name_translations": {
-      "en": "Germany"
-    },
-    "cases": {
-      "su": "Germany"
+      "en": "Germany",
+      "pl": "Niemcy"
     },
     "code": "DE",
     "name": "Germany",
@@ -649,10 +541,8 @@
   },
   {
     "name_translations": {
-      "en": "New Zealand"
-    },
-    "cases": {
-      "su": "New Zealand"
+      "en": "New Zealand",
+      "pl": "Nowa Zelandia"
     },
     "code": "NZ",
     "name": "New Zealand",
@@ -661,10 +551,8 @@
   },
   {
     "name_translations": {
-      "en": "Haiti"
-    },
-    "cases": {
-      "su": "Haiti"
+      "en": "Haiti",
+      "pl": "Haiti"
     },
     "code": "HT",
     "name": "Haiti",
@@ -673,10 +561,8 @@
   },
   {
     "name_translations": {
-      "en": "Iraq"
-    },
-    "cases": {
-      "su": "Iraq"
+      "en": "Iraq",
+      "pl": "Irak"
     },
     "code": "IQ",
     "name": "Iraq",
@@ -685,10 +571,8 @@
   },
   {
     "name_translations": {
-      "en": "India"
-    },
-    "cases": {
-      "su": "India"
+      "en": "India",
+      "pl": "Indie"
     },
     "code": "IN",
     "name": "India",
@@ -697,10 +581,8 @@
   },
   {
     "name_translations": {
-      "en": "Bahrain"
-    },
-    "cases": {
-      "su": "Bahrain"
+      "en": "Bahrain",
+      "pl": "Bahrajn"
     },
     "code": "BH",
     "name": "Bahrain",
@@ -709,10 +591,8 @@
   },
   {
     "name_translations": {
-      "en": "Portugal"
-    },
-    "cases": {
-      "su": "Portugal"
+      "en": "Portugal",
+      "pl": "Portugalia"
     },
     "code": "PT",
     "name": "Portugal",
@@ -721,10 +601,8 @@
   },
   {
     "name_translations": {
-      "en": "Kenya"
-    },
-    "cases": {
-      "su": "Kenya"
+      "en": "Kenya",
+      "pl": "Kenia"
     },
     "code": "KE",
     "name": "Kenya",
@@ -733,10 +611,8 @@
   },
   {
     "name_translations": {
-      "en": "Chad"
-    },
-    "cases": {
-      "su": "Chad"
+      "en": "Chad",
+      "pl": "Czad"
     },
     "code": "TD",
     "name": "Chad",
@@ -745,10 +621,8 @@
   },
   {
     "name_translations": {
-      "en": "Sierra Leone"
-    },
-    "cases": {
-      "su": "Sierra Leone"
+      "en": "Sierra Leone",
+      "pl": "Sierra Leone"
     },
     "code": "SL",
     "name": "Sierra Leone",
@@ -757,10 +631,8 @@
   },
   {
     "name_translations": {
-      "en": "Bulgaria"
-    },
-    "cases": {
-      "su": "Bulgaria"
+      "en": "Bulgaria",
+      "pl": "Bułgaria"
     },
     "code": "BG",
     "name": "Bulgaria",
@@ -769,10 +641,8 @@
   },
   {
     "name_translations": {
-      "en": "Comoros"
-    },
-    "cases": {
-      "su": "Comoros"
+      "en": "Comoros",
+      "pl": "Komory"
     },
     "code": "KM",
     "name": "Comoros",
@@ -781,10 +651,8 @@
   },
   {
     "name_translations": {
-      "en": "Palau"
-    },
-    "cases": {
-      "su": "Palau"
+      "en": "Palau",
+      "pl": "Palau"
     },
     "code": "PW",
     "name": "Palau",
@@ -793,10 +661,8 @@
   },
   {
     "name_translations": {
-      "en": "Cocos (Keeling) Islands"
-    },
-    "cases": {
-      "su": "Cocos (Keeling) Islands"
+      "en": "Cocos (Keeling) Islands",
+      "pl": "Wyspy Kokosowe"
     },
     "code": "CC",
     "name": "Cocos (Keeling) Islands",
@@ -805,10 +671,8 @@
   },
   {
     "name_translations": {
-      "en": "Suriname"
-    },
-    "cases": {
-      "su": "Suriname"
+      "en": "Suriname",
+      "pl": "Surinam"
     },
     "code": "SR",
     "name": "Suriname",
@@ -817,10 +681,8 @@
   },
   {
     "name_translations": {
-      "en": "Cameroon"
-    },
-    "cases": {
-      "su": "Cameroon"
+      "en": "Cameroon",
+      "pl": "Kamerun"
     },
     "code": "CM",
     "name": "Cameroon",
@@ -829,10 +691,8 @@
   },
   {
     "name_translations": {
-      "en": "Cambodia"
-    },
-    "cases": {
-      "su": "Cambodia"
+      "en": "Cambodia",
+      "pl": "Kambodża"
     },
     "code": "KH",
     "name": "Cambodia",
@@ -841,10 +701,8 @@
   },
   {
     "name_translations": {
-      "en": "Lithuania"
-    },
-    "cases": {
-      "su": "Lithuania"
+      "en": "Lithuania",
+      "pl": "Litwa"
     },
     "code": "LT",
     "name": "Lithuania",
@@ -853,10 +711,8 @@
   },
   {
     "name_translations": {
-      "en": "Gibraltar"
-    },
-    "cases": {
-      "su": "Gibraltar"
+      "en": "Gibraltar",
+      "pl": "Gibraltar"
     },
     "code": "GI",
     "name": "Gibraltar",
@@ -865,10 +721,8 @@
   },
   {
     "name_translations": {
-      "en": "Tunisia"
-    },
-    "cases": {
-      "su": "Tunisia"
+      "en": "Tunisia",
+      "pl": "Tunezja"
     },
     "code": "TN",
     "name": "Tunisia",
@@ -877,10 +731,8 @@
   },
   {
     "name_translations": {
-      "en": "Saint Pierre and Miquelon"
-    },
-    "cases": {
-      "su": "Saint Pierre and Miquelon"
+      "en": "Saint Pierre and Miquelon",
+      "pl": "Saint-Pierre i Miquelon"
     },
     "code": "PM",
     "name": "Saint Pierre and Miquelon",
@@ -889,10 +741,8 @@
   },
   {
     "name_translations": {
-      "en": "Vanuatu"
-    },
-    "cases": {
-      "su": "Vanuatu"
+      "en": "Vanuatu",
+      "pl": "Vanuatu"
     },
     "code": "VU",
     "name": "Vanuatu",
@@ -901,10 +751,8 @@
   },
   {
     "name_translations": {
-      "en": "Turkmenistan"
-    },
-    "cases": {
-      "su": "Turkmenistan"
+      "en": "Turkmenistan",
+      "pl": "Turkmenistan"
     },
     "code": "TM",
     "name": "Turkmenistan",
@@ -913,10 +761,8 @@
   },
   {
     "name_translations": {
-      "en": "Qatar"
-    },
-    "cases": {
-      "su": "Qatar"
+      "en": "Qatar",
+      "pl": "Katar"
     },
     "code": "QA",
     "name": "Qatar",
@@ -925,10 +771,8 @@
   },
   {
     "name_translations": {
-      "en": "Switzerland"
-    },
-    "cases": {
-      "su": "Switzerland"
+      "en": "Switzerland",
+      "pl": "Szwajcaria"
     },
     "code": "CH",
     "name": "Switzerland",
@@ -937,10 +781,8 @@
   },
   {
     "name_translations": {
-      "en": "Barbados"
-    },
-    "cases": {
-      "su": "Barbados"
+      "en": "Barbados",
+      "pl": "Barbados"
     },
     "code": "BB",
     "name": "Barbados",
@@ -949,10 +791,8 @@
   },
   {
     "name_translations": {
-      "en": "Sudan"
-    },
-    "cases": {
-      "su": "Sudan"
+      "en": "Sudan",
+      "pl": "Sudan"
     },
     "code": "SD",
     "name": "Sudan",
@@ -961,10 +801,8 @@
   },
   {
     "name_translations": {
-      "en": "Macau"
-    },
-    "cases": {
-      "su": "Macau"
+      "en": "Macau",
+      "pl": "Makau"
     },
     "code": "MO",
     "name": "Macau",
@@ -973,10 +811,8 @@
   },
   {
     "name_translations": {
-      "en": "Saint Vincent and the Grenadines"
-    },
-    "cases": {
-      "su": "Saint Vincent and the Grenadines"
+      "en": "Saint Vincent and the Grenadines",
+      "pl": "Saint Vincent i Grenadyny"
     },
     "code": "VC",
     "name": "Saint Vincent and the Grenadines",
@@ -985,10 +821,8 @@
   },
   {
     "name_translations": {
-      "en": "Tajikistan"
-    },
-    "cases": {
-      "su": "Tajikistan"
+      "en": "Tajikistan",
+      "pl": "Tadżykistan"
     },
     "code": "TJ",
     "name": "Tajikistan",
@@ -997,10 +831,8 @@
   },
   {
     "name_translations": {
-      "en": "Greece"
-    },
-    "cases": {
-      "su": "Greece"
+      "en": "Greece",
+      "pl": "Grecja"
     },
     "code": "GR",
     "name": "Greece",
@@ -1009,10 +841,8 @@
   },
   {
     "name_translations": {
-      "en": "Caribbean Netherlands"
-    },
-    "cases": {
-      "su": "Caribbean Netherlands"
+      "en": "Caribbean Netherlands",
+      "pl": "Niderlandy Karaibskie"
     },
     "code": "BQ",
     "name": "Caribbean Netherlands",
@@ -1021,10 +851,8 @@
   },
   {
     "name_translations": {
-      "en": "Italy"
-    },
-    "cases": {
-      "su": "Italy"
+      "en": "Italy",
+      "pl": "Włochy"
     },
     "code": "IT",
     "name": "Italy",
@@ -1033,10 +861,8 @@
   },
   {
     "name_translations": {
-      "en": "Serbia"
-    },
-    "cases": {
-      "su": "Serbia"
+      "en": "Serbia",
+      "pl": "Serbia"
     },
     "code": "RS",
     "name": "Serbia",
@@ -1045,10 +871,8 @@
   },
   {
     "name_translations": {
-      "en": "Belize"
-    },
-    "cases": {
-      "su": "Belize"
+      "en": "Belize",
+      "pl": "Belize"
     },
     "code": "BZ",
     "name": "Belize",
@@ -1057,10 +881,8 @@
   },
   {
     "name_translations": {
-      "en": "Poland"
-    },
-    "cases": {
-      "su": "Poland"
+      "en": "Poland",
+      "pl": "Polska"
     },
     "code": "PL",
     "name": "Poland",
@@ -1069,10 +891,8 @@
   },
   {
     "name_translations": {
-      "en": "Panama"
-    },
-    "cases": {
-      "su": "Panama"
+      "en": "Panama",
+      "pl": "Panama"
     },
     "code": "PA",
     "name": "Panama",
@@ -1081,10 +901,8 @@
   },
   {
     "name_translations": {
-      "en": "United Arab Emirates"
-    },
-    "cases": {
-      "su": "United Arab Emirates"
+      "en": "United Arab Emirates",
+      "pl": "Zjednoczone Emiraty Arabskie"
     },
     "code": "AE",
     "name": "United Arab Emirates",
@@ -1093,10 +911,8 @@
   },
   {
     "name_translations": {
-      "en": "Senegal"
-    },
-    "cases": {
-      "su": "Senegal"
+      "en": "Senegal",
+      "pl": "Senegal"
     },
     "code": "SN",
     "name": "Senegal",
@@ -1105,10 +921,8 @@
   },
   {
     "name_translations": {
-      "en": "Maldives"
-    },
-    "cases": {
-      "su": "Maldives"
+      "en": "Maldives",
+      "pl": "Malediwy"
     },
     "code": "MV",
     "name": "Maldives",
@@ -1117,10 +931,8 @@
   },
   {
     "name_translations": {
-      "en": "Vietnam"
-    },
-    "cases": {
-      "su": "Vietnam"
+      "en": "Vietnam",
+      "pl": "Wietnam"
     },
     "code": "VN",
     "name": "Vietnam",
@@ -1129,10 +941,8 @@
   },
   {
     "name_translations": {
-      "en": "Latvia"
-    },
-    "cases": {
-      "su": "Latvia"
+      "en": "Latvia",
+      "pl": "Łotwa"
     },
     "code": "LV",
     "name": "Latvia",
@@ -1141,10 +951,8 @@
   },
   {
     "name_translations": {
-      "en": "Nicaragua"
-    },
-    "cases": {
-      "su": "Nicaragua"
+      "en": "Nicaragua",
+      "pl": "Nikaragua"
     },
     "code": "NI",
     "name": "Nicaragua",
@@ -1153,10 +961,8 @@
   },
   {
     "name_translations": {
-      "en": "Solomon Islands"
-    },
-    "cases": {
-      "su": "Solomon Islands"
+      "en": "Solomon Islands",
+      "pl": "Wyspy Salomona"
     },
     "code": "SB",
     "name": "Solomon Islands",
@@ -1165,10 +971,8 @@
   },
   {
     "name_translations": {
-      "en": "U.S. Virgin Islands"
-    },
-    "cases": {
-      "su": "U.S. Virgin Islands"
+      "en": "U.S. Virgin Islands",
+      "pl": "Wyspy Dziewicze Stanów Zjednoczonych"
     },
     "code": "VI",
     "name": "U.S. Virgin Islands",
@@ -1177,10 +981,8 @@
   },
   {
     "name_translations": {
-      "en": "Falkland Islands"
-    },
-    "cases": {
-      "su": "Falkland Islands"
+      "en": "Falkland Islands",
+      "pl": "Falklandy (Malwiny)"
     },
     "code": "FK",
     "name": "Falkland Islands",
@@ -1189,10 +991,8 @@
   },
   {
     "name_translations": {
-      "en": "Bolivia"
-    },
-    "cases": {
-      "su": "Bolivia"
+      "en": "Bolivia",
+      "pl": "Boliwia"
     },
     "code": "BO",
     "name": "Bolivia",
@@ -1201,10 +1001,8 @@
   },
   {
     "name_translations": {
-      "en": "Djibouti"
-    },
-    "cases": {
-      "su": "Djibouti"
+      "en": "Djibouti",
+      "pl": "Dżibuti"
     },
     "code": "DJ",
     "name": "Djibouti",
@@ -1213,10 +1011,8 @@
   },
   {
     "name_translations": {
-      "en": "Indonesia"
-    },
-    "cases": {
-      "su": "Indonesia"
+      "en": "Indonesia",
+      "pl": "Indonezja"
     },
     "code": "ID",
     "name": "Indonesia",
@@ -1225,10 +1021,8 @@
   },
   {
     "name_translations": {
-      "en": "United States"
-    },
-    "cases": {
-      "su": "United States"
+      "en": "United States",
+      "pl": "USA"
     },
     "code": "US",
     "name": "United States",
@@ -1237,10 +1031,8 @@
   },
   {
     "name_translations": {
-      "en": "Marshall Islands"
-    },
-    "cases": {
-      "su": "Marshall Islands"
+      "en": "Marshall Islands",
+      "pl": "Wyspy Marshalla"
     },
     "code": "MH",
     "name": "Marshall Islands",
@@ -1249,10 +1041,8 @@
   },
   {
     "name_translations": {
-      "en": "Niue"
-    },
-    "cases": {
-      "su": "Niue"
+      "en": "Niue",
+      "pl": "Niue"
     },
     "code": "NU",
     "name": "Niue",
@@ -1261,10 +1051,8 @@
   },
   {
     "name_translations": {
-      "en": "Aruba"
-    },
-    "cases": {
-      "su": "Aruba"
+      "en": "Aruba",
+      "pl": "Aruba"
     },
     "code": "AW",
     "name": "Aruba",
@@ -1273,10 +1061,8 @@
   },
   {
     "name_translations": {
-      "en": "Gambia"
-    },
-    "cases": {
-      "su": "Gambia"
+      "en": "Gambia",
+      "pl": "Gambia"
     },
     "code": "GM",
     "name": "Gambia",
@@ -1285,10 +1071,8 @@
   },
   {
     "name_translations": {
-      "en": "Guinea-Bissau"
-    },
-    "cases": {
-      "su": "Guinea-Bissau"
+      "en": "Guinea-Bissau",
+      "pl": "Gwinea Bissau"
     },
     "code": "GW",
     "name": "Guinea-Bissau",
@@ -1297,10 +1081,8 @@
   },
   {
     "name_translations": {
-      "en": "Bermuda"
-    },
-    "cases": {
-      "su": "Bermuda"
+      "en": "Bermuda",
+      "pl": "Bermudy"
     },
     "code": "BM",
     "name": "Bermuda",
@@ -1309,10 +1091,8 @@
   },
   {
     "name_translations": {
-      "en": "Fiji"
-    },
-    "cases": {
-      "su": "Fiji"
+      "en": "Fiji",
+      "pl": "Fidżi"
     },
     "code": "FJ",
     "name": "Fiji",
@@ -1321,10 +1101,8 @@
   },
   {
     "name_translations": {
-      "en": "Taiwan"
-    },
-    "cases": {
-      "su": "Taiwan"
+      "en": "Taiwan",
+      "pl": "Tajwan"
     },
     "code": "TW",
     "name": "Taiwan",
@@ -1333,10 +1111,8 @@
   },
   {
     "name_translations": {
-      "en": "Czech Republic"
-    },
-    "cases": {
-      "su": "Czech Republic"
+      "en": "Czech Republic",
+      "pl": "Czechy"
     },
     "code": "CZ",
     "name": "Czech Republic",
@@ -1345,10 +1121,8 @@
   },
   {
     "name_translations": {
-      "en": "Venezuela"
-    },
-    "cases": {
-      "su": "Venezuela"
+      "en": "Venezuela",
+      "pl": "Wenezuela"
     },
     "code": "VE",
     "name": "Venezuela",
@@ -1357,10 +1131,8 @@
   },
   {
     "name_translations": {
-      "en": "Christmas Island"
-    },
-    "cases": {
-      "su": "Christmas Island"
+      "en": "Christmas Island",
+      "pl": "Wyspa Bożego Narodzenia"
     },
     "code": "CX",
     "name": "Christmas Island",
@@ -1369,10 +1141,8 @@
   },
   {
     "name_translations": {
-      "en": "Denmark"
-    },
-    "cases": {
-      "su": "Denmark"
+      "en": "Denmark",
+      "pl": "Dania"
     },
     "code": "DK",
     "name": "Denmark",
@@ -1381,10 +1151,8 @@
   },
   {
     "name_translations": {
-      "en": "Austria"
-    },
-    "cases": {
-      "su": "Austria"
+      "en": "Austria",
+      "pl": "Austria"
     },
     "code": "AT",
     "name": "Austria",
@@ -1393,10 +1161,8 @@
   },
   {
     "name_translations": {
-      "en": "Bahamas"
-    },
-    "cases": {
-      "su": "Bahamas"
+      "en": "Bahamas",
+      "pl": "Bahamy"
     },
     "code": "BS",
     "name": "Bahamas",
@@ -1405,10 +1171,8 @@
   },
   {
     "name_translations": {
-      "en": "Ghana"
-    },
-    "cases": {
-      "su": "Ghana"
+      "en": "Ghana",
+      "pl": "Ghana"
     },
     "code": "GH",
     "name": "Ghana",
@@ -1417,10 +1181,8 @@
   },
   {
     "name_translations": {
-      "en": "Cook Islands"
-    },
-    "cases": {
-      "su": "Cook Islands"
+      "en": "Cook Islands",
+      "pl": "Wyspy Cooka"
     },
     "code": "CK",
     "name": "Cook Islands",
@@ -1429,10 +1191,8 @@
   },
   {
     "name_translations": {
-      "en": "Georgia"
-    },
-    "cases": {
-      "su": "Georgia"
+      "en": "Georgia",
+      "pl": "Gruzja"
     },
     "code": "GE",
     "name": "Georgia",
@@ -1441,10 +1201,8 @@
   },
   {
     "name_translations": {
-      "en": "Montserrat"
-    },
-    "cases": {
-      "su": "Montserrat"
+      "en": "Montserrat",
+      "pl": "Montserrat"
     },
     "code": "MS",
     "name": "Montserrat",
@@ -1453,10 +1211,8 @@
   },
   {
     "name_translations": {
-      "en": "Thailand"
-    },
-    "cases": {
-      "su": "Thailand"
+      "en": "Thailand",
+      "pl": "Tajlandia"
     },
     "code": "TH",
     "name": "Thailand",
@@ -1465,10 +1221,8 @@
   },
   {
     "name_translations": {
-      "en": "Kuwait"
-    },
-    "cases": {
-      "su": "Kuwait"
+      "en": "Kuwait",
+      "pl": "Kuwejt"
     },
     "code": "KW",
     "name": "Kuwait",
@@ -1477,10 +1231,8 @@
   },
   {
     "name_translations": {
-      "en": "Afghanistan"
-    },
-    "cases": {
-      "su": "Afghanistan"
+      "en": "Afghanistan",
+      "pl": "Afganistan"
     },
     "code": "AF",
     "name": "Afghanistan",
@@ -1489,10 +1241,8 @@
   },
   {
     "name_translations": {
-      "en": "Ethiopia"
-    },
-    "cases": {
-      "su": "Ethiopia"
+      "en": "Ethiopia",
+      "pl": "Etiopia"
     },
     "code": "ET",
     "name": "Ethiopia",
@@ -1501,10 +1251,8 @@
   },
   {
     "name_translations": {
-      "en": "Armenia"
-    },
-    "cases": {
-      "su": "Armenia"
+      "en": "Armenia",
+      "pl": "Armenia"
     },
     "code": "AM",
     "name": "Armenia",
@@ -1513,10 +1261,8 @@
   },
   {
     "name_translations": {
-      "en": "Mongolia"
-    },
-    "cases": {
-      "su": "Mongolia"
+      "en": "Mongolia",
+      "pl": "Mongolia"
     },
     "code": "MN",
     "name": "Mongolia",
@@ -1525,10 +1271,8 @@
   },
   {
     "name_translations": {
-      "en": "Kyrgyzstan"
-    },
-    "cases": {
-      "su": "Kyrgyzstan"
+      "en": "Kyrgyzstan",
+      "pl": "Kirgistan"
     },
     "code": "KG",
     "name": "Kyrgyzstan",
@@ -1537,10 +1281,8 @@
   },
   {
     "name_translations": {
-      "en": "Romania"
-    },
-    "cases": {
-      "su": "Romania"
+      "en": "Romania",
+      "pl": "Rumunia"
     },
     "code": "RO",
     "name": "Romania",
@@ -1549,10 +1291,8 @@
   },
   {
     "name_translations": {
-      "en": "Colombia"
-    },
-    "cases": {
-      "su": "Colombia"
+      "en": "Colombia",
+      "pl": "Kolumbia"
     },
     "code": "CO",
     "name": "Colombia",
@@ -1561,10 +1301,8 @@
   },
   {
     "name_translations": {
-      "en": "Mauritania"
-    },
-    "cases": {
-      "su": "Mauritania"
+      "en": "Mauritania",
+      "pl": "Mauretania"
     },
     "code": "MR",
     "name": "Mauritania",
@@ -1573,10 +1311,8 @@
   },
   {
     "name_translations": {
-      "en": "Nigeria"
-    },
-    "cases": {
-      "su": "Nigeria"
+      "en": "Nigeria",
+      "pl": "Nigeria"
     },
     "code": "NG",
     "name": "Nigeria",
@@ -1585,10 +1321,8 @@
   },
   {
     "name_translations": {
-      "en": "Bangladesh"
-    },
-    "cases": {
-      "su": "Bangladesh"
+      "en": "Bangladesh",
+      "pl": "Bangladesz"
     },
     "code": "BD",
     "name": "Bangladesh",
@@ -1597,10 +1331,8 @@
   },
   {
     "name_translations": {
-      "en": "North Macedonia"
-    },
-    "cases": {
-      "su": "North Macedonia"
+      "en": "North Macedonia",
+      "pl": "Macedonia"
     },
     "code": "MK",
     "name": "North Macedonia",
@@ -1609,10 +1341,8 @@
   },
   {
     "name_translations": {
-      "en": "Abkhazia"
-    },
-    "cases": {
-      "su": "Abkhazia"
+      "en": "Abkhazia",
+      "pl": "Abchazja"
     },
     "code": "AB",
     "name": "Abkhazia",
@@ -1621,10 +1351,8 @@
   },
   {
     "name_translations": {
-      "en": "Madagascar"
-    },
-    "cases": {
-      "su": "Madagascar"
+      "en": "Madagascar",
+      "pl": "Madagaskar"
     },
     "code": "MG",
     "name": "Madagascar",
@@ -1633,10 +1361,8 @@
   },
   {
     "name_translations": {
-      "en": "Oman"
-    },
-    "cases": {
-      "su": "Oman"
+      "en": "Oman",
+      "pl": "Oman"
     },
     "code": "OM",
     "name": "Oman",
@@ -1645,10 +1371,8 @@
   },
   {
     "name_translations": {
-      "en": "Ecuador"
-    },
-    "cases": {
-      "su": "Ecuador"
+      "en": "Ecuador",
+      "pl": "Ekwador"
     },
     "code": "EC",
     "name": "Ecuador",
@@ -1657,10 +1381,8 @@
   },
   {
     "name_translations": {
-      "en": "Mayotte"
-    },
-    "cases": {
-      "su": "Mayotte"
+      "en": "Mayotte",
+      "pl": "Majotta"
     },
     "code": "YT",
     "name": "Mayotte",
@@ -1669,10 +1391,8 @@
   },
   {
     "name_translations": {
-      "en": "Seychelles"
-    },
-    "cases": {
-      "su": "Seychelles"
+      "en": "Seychelles",
+      "pl": "Seszele"
     },
     "code": "SC",
     "name": "Seychelles",
@@ -1681,10 +1401,8 @@
   },
   {
     "name_translations": {
-      "en": "Northern Cyprus"
-    },
-    "cases": {
-      "su": "Northern Cyprus"
+      "en": "Northern Cyprus",
+      "pl": "Cypr Północny"
     },
     "code": "NY",
     "name": "Northern Cyprus",
@@ -1693,10 +1411,8 @@
   },
   {
     "name_translations": {
-      "en": "Uruguay"
-    },
-    "cases": {
-      "su": "Uruguay"
+      "en": "Uruguay",
+      "pl": "Urugwaj"
     },
     "code": "UY",
     "name": "Uruguay",
@@ -1705,10 +1421,8 @@
   },
   {
     "name_translations": {
-      "en": "Martinique"
-    },
-    "cases": {
-      "su": "Martinique"
+      "en": "Martinique",
+      "pl": "Martynika"
     },
     "code": "MQ",
     "name": "Martinique",
@@ -1717,10 +1431,8 @@
   },
   {
     "name_translations": {
-      "en": "China"
-    },
-    "cases": {
-      "su": "China"
+      "en": "China",
+      "pl": "Chiny"
     },
     "code": "CN",
     "name": "China",
@@ -1729,10 +1441,8 @@
   },
   {
     "name_translations": {
-      "en": "American Samoa"
-    },
-    "cases": {
-      "su": "American Samoa"
+      "en": "American Samoa",
+      "pl": "Samoa Amerykańskie"
     },
     "code": "AS",
     "name": "American Samoa",
@@ -1741,10 +1451,8 @@
   },
   {
     "name_translations": {
-      "en": "South Africa"
-    },
-    "cases": {
-      "su": "South Africa"
+      "en": "South Africa",
+      "pl": "Republika Południowej Afryki"
     },
     "code": "ZA",
     "name": "South Africa",
@@ -1753,10 +1461,8 @@
   },
   {
     "name_translations": {
-      "en": "Turks and Caicos Islands"
-    },
-    "cases": {
-      "su": "Turks and Caicos Islands"
+      "en": "Turks and Caicos Islands",
+      "pl": "Turks i Caicos"
     },
     "code": "TC",
     "name": "Turks and Caicos Islands",
@@ -1765,10 +1471,8 @@
   },
   {
     "name_translations": {
-      "en": "Japan"
-    },
-    "cases": {
-      "su": "Japan"
+      "en": "Japan",
+      "pl": "Japonia"
     },
     "code": "JP",
     "name": "Japan",
@@ -1777,10 +1481,8 @@
   },
   {
     "name_translations": {
-      "en": "Anguilla"
-    },
-    "cases": {
-      "su": "Anguilla"
+      "en": "Anguilla",
+      "pl": "Anguilla"
     },
     "code": "AI",
     "name": "Anguilla",
@@ -1789,10 +1491,8 @@
   },
   {
     "name_translations": {
-      "en": "Russia"
-    },
-    "cases": {
-      "su": "Russia"
+      "en": "Russia",
+      "pl": "Rosja"
     },
     "code": "RU",
     "name": "Russia",
@@ -1801,10 +1501,8 @@
   },
   {
     "name_translations": {
-      "en": "Albania"
-    },
-    "cases": {
-      "su": "Albania"
+      "en": "Albania",
+      "pl": "Albania"
     },
     "code": "AL",
     "name": "Albania",
@@ -1813,10 +1511,8 @@
   },
   {
     "name_translations": {
-      "en": "Zimbabwe"
-    },
-    "cases": {
-      "su": "Zimbabwe"
+      "en": "Zimbabwe",
+      "pl": "Zimbabwe"
     },
     "code": "ZW",
     "name": "Zimbabwe",
@@ -1825,10 +1521,8 @@
   },
   {
     "name_translations": {
-      "en": "Libya"
-    },
-    "cases": {
-      "su": "Libya"
+      "en": "Libya",
+      "pl": "Libia"
     },
     "code": "LY",
     "name": "Libya",
@@ -1837,10 +1531,8 @@
   },
   {
     "name_translations": {
-      "en": "Malawi"
-    },
-    "cases": {
-      "su": "Malawi"
+      "en": "Malawi",
+      "pl": "Malawi"
     },
     "code": "MW",
     "name": "Malawi",
@@ -1849,10 +1541,8 @@
   },
   {
     "name_translations": {
-      "en": "Yemen"
-    },
-    "cases": {
-      "su": "Yemen"
+      "en": "Yemen",
+      "pl": "Jemen"
     },
     "code": "YE",
     "name": "Yemen",
@@ -1861,10 +1551,8 @@
   },
   {
     "name_translations": {
-      "en": "New Caledonia"
-    },
-    "cases": {
-      "su": "New Caledonia"
+      "en": "New Caledonia",
+      "pl": "Nowa Kaledonia"
     },
     "code": "NC",
     "name": "New Caledonia",
@@ -1873,10 +1561,8 @@
   },
   {
     "name_translations": {
-      "en": "Netherlands"
-    },
-    "cases": {
-      "su": "Netherlands"
+      "en": "Netherlands",
+      "pl": "Holandia"
     },
     "code": "NL",
     "name": "Netherlands",
@@ -1885,10 +1571,8 @@
   },
   {
     "name_translations": {
-      "en": "Guatemala"
-    },
-    "cases": {
-      "su": "Guatemala"
+      "en": "Guatemala",
+      "pl": "Gwatemala"
     },
     "code": "GT",
     "name": "Guatemala",
@@ -1897,10 +1581,8 @@
   },
   {
     "name_translations": {
-      "en": "Zambia"
-    },
-    "cases": {
-      "su": "Zambia"
+      "en": "Zambia",
+      "pl": "Zambia"
     },
     "code": "ZM",
     "name": "Zambia",
@@ -1909,10 +1591,8 @@
   },
   {
     "name_translations": {
-      "en": "Jordan"
-    },
-    "cases": {
-      "su": "Jordan"
+      "en": "Jordan",
+      "pl": "Jordania"
     },
     "code": "JO",
     "name": "Jordan",
@@ -1921,10 +1601,8 @@
   },
   {
     "name_translations": {
-      "en": "Belarus"
-    },
-    "cases": {
-      "su": "Belarus"
+      "en": "Belarus",
+      "pl": "Białoruś"
     },
     "code": "BY",
     "name": "Belarus",
@@ -1933,10 +1611,8 @@
   },
   {
     "name_translations": {
-      "en": "Jersey"
-    },
-    "cases": {
-      "su": "Jersey"
+      "en": "Jersey",
+      "pl": "Wyspa Jersey"
     },
     "code": "JE",
     "name": "Jersey",
@@ -1945,10 +1621,8 @@
   },
   {
     "name_translations": {
-      "en": "Nauru"
-    },
-    "cases": {
-      "su": "Nauru"
+      "en": "Nauru",
+      "pl": "Nauru"
     },
     "code": "NR",
     "name": "Nauru",
@@ -1957,10 +1631,8 @@
   },
   {
     "name_translations": {
-      "en": "Saint Lucia"
-    },
-    "cases": {
-      "su": "Saint Lucia"
+      "en": "Saint Lucia",
+      "pl": "Saint Lucia"
     },
     "code": "LC",
     "name": "Saint Lucia",
@@ -1969,10 +1641,8 @@
   },
   {
     "name_translations": {
-      "en": "Guadeloupe"
-    },
-    "cases": {
-      "su": "Guadeloupe"
+      "en": "Guadeloupe",
+      "pl": "Gwadelupa"
     },
     "code": "GP",
     "name": "Guadeloupe",
@@ -1981,10 +1651,8 @@
   },
   {
     "name_translations": {
-      "en": "Bhutan"
-    },
-    "cases": {
-      "su": "Bhutan"
+      "en": "Bhutan",
+      "pl": "Bhutan"
     },
     "code": "BT",
     "name": "Bhutan",
@@ -1993,10 +1661,8 @@
   },
   {
     "name_translations": {
-      "en": "Northern Mariana Islands"
-    },
-    "cases": {
-      "su": "Northern Mariana Islands"
+      "en": "Northern Mariana Islands",
+      "pl": "Mariany Północne"
     },
     "code": "MP",
     "name": "Northern Mariana Islands",
@@ -2005,10 +1671,8 @@
   },
   {
     "name_translations": {
-      "en": "Saint Kitts and Nevis"
-    },
-    "cases": {
-      "su": "Saint Kitts and Nevis"
+      "en": "Saint Kitts and Nevis",
+      "pl": "Saint Kitts i Nevis"
     },
     "code": "KN",
     "name": "Saint Kitts and Nevis",
@@ -2017,10 +1681,8 @@
   },
   {
     "name_translations": {
-      "en": "Sint Maarten"
-    },
-    "cases": {
-      "su": "Sint Maarten"
+      "en": "Sint Maarten",
+      "pl": "Sint Maarten"
     },
     "code": "SX",
     "name": "Sint Maarten",
@@ -2029,10 +1691,8 @@
   },
   {
     "name_translations": {
-      "en": "Hungary"
-    },
-    "cases": {
-      "su": "Hungary"
+      "en": "Hungary",
+      "pl": "Węgry"
     },
     "code": "HU",
     "name": "Hungary",
@@ -2041,10 +1701,8 @@
   },
   {
     "name_translations": {
-      "en": "North Korea"
-    },
-    "cases": {
-      "su": "North Korea"
+      "en": "North Korea",
+      "pl": "Korea Północna"
     },
     "code": "KP",
     "name": "North Korea",
@@ -2053,10 +1711,8 @@
   },
   {
     "name_translations": {
-      "en": "Cyprus"
-    },
-    "cases": {
-      "su": "Cyprus"
+      "en": "Cyprus",
+      "pl": "Cypr"
     },
     "code": "CY",
     "name": "Cyprus",
@@ -2065,10 +1721,8 @@
   },
   {
     "name_translations": {
-      "en": "Lebanon"
-    },
-    "cases": {
-      "su": "Lebanon"
+      "en": "Lebanon",
+      "pl": "Liban"
     },
     "code": "LB",
     "name": "Lebanon",
@@ -2077,10 +1731,8 @@
   },
   {
     "name_translations": {
-      "en": "Western Sahara"
-    },
-    "cases": {
-      "su": "Western Sahara"
+      "en": "Western Sahara",
+      "pl": "Sahara Zachodnia"
     },
     "code": "EH",
     "name": "Western Sahara",
@@ -2089,10 +1741,8 @@
   },
   {
     "name_translations": {
-      "en": "Trinidad and Tobago"
-    },
-    "cases": {
-      "su": "Trinidad and Tobago"
+      "en": "Trinidad and Tobago",
+      "pl": "Trynidad i Tobago"
     },
     "code": "TT",
     "name": "Trinidad and Tobago",
@@ -2101,10 +1751,8 @@
   },
   {
     "name_translations": {
-      "en": "Antigua and Barbuda"
-    },
-    "cases": {
-      "su": "Antigua and Barbuda"
+      "en": "Antigua and Barbuda",
+      "pl": "Antigua i Barbuda"
     },
     "code": "AG",
     "name": "Antigua and Barbuda",
@@ -2113,10 +1761,8 @@
   },
   {
     "name_translations": {
-      "en": "Peru"
-    },
-    "cases": {
-      "su": "Peru"
+      "en": "Peru",
+      "pl": "Peru"
     },
     "code": "PE",
     "name": "Peru",
@@ -2125,10 +1771,8 @@
   },
   {
     "name_translations": {
-      "en": "Guinea"
-    },
-    "cases": {
-      "su": "Guinea"
+      "en": "Guinea",
+      "pl": "Gwinea"
     },
     "code": "GN",
     "name": "Guinea",
@@ -2137,10 +1781,8 @@
   },
   {
     "name_translations": {
-      "en": "Croatia"
-    },
-    "cases": {
-      "su": "Croatia"
+      "en": "Croatia",
+      "pl": "Chorwacja"
     },
     "code": "HR",
     "name": "Croatia",
@@ -2149,10 +1791,8 @@
   },
   {
     "name_translations": {
-      "en": "Togo"
-    },
-    "cases": {
-      "su": "Togo"
+      "en": "Togo",
+      "pl": "Togo"
     },
     "code": "TG",
     "name": "Togo",
@@ -2161,10 +1801,8 @@
   },
   {
     "name_translations": {
-      "en": "Niger"
-    },
-    "cases": {
-      "su": "Niger"
+      "en": "Niger",
+      "pl": "Niger"
     },
     "code": "NE",
     "name": "Niger",
@@ -2173,10 +1811,8 @@
   },
   {
     "name_translations": {
-      "en": "Spain"
-    },
-    "cases": {
-      "su": "Spain"
+      "en": "Spain",
+      "pl": "Hiszpania"
     },
     "code": "ES",
     "name": "Spain",
@@ -2185,10 +1821,8 @@
   },
   {
     "name_translations": {
-      "en": "Namibia"
-    },
-    "cases": {
-      "su": "Namibia"
+      "en": "Namibia",
+      "pl": "Namibia"
     },
     "code": "NA",
     "name": "Namibia",
@@ -2197,10 +1831,8 @@
   },
   {
     "name_translations": {
-      "en": "Crimea"
-    },
-    "cases": {
-      "su": "Crimea"
+      "en": "Crimea",
+      "pl": "Crimea"
     },
     "code": "KX",
     "name": "Crimea",
@@ -2209,10 +1841,8 @@
   },
   {
     "name_translations": {
-      "en": "Norway"
-    },
-    "cases": {
-      "su": "Norway"
+      "en": "Norway",
+      "pl": "Norwegia"
     },
     "code": "NO",
     "name": "Norway",
@@ -2221,10 +1851,8 @@
   },
   {
     "name_translations": {
-      "en": "Dominican Republic"
-    },
-    "cases": {
-      "su": "Dominican Republic"
+      "en": "Dominican Republic",
+      "pl": "Dominikana"
     },
     "code": "DO",
     "name": "Dominican Republic",
@@ -2233,10 +1861,8 @@
   },
   {
     "name_translations": {
-      "en": "Turkey"
-    },
-    "cases": {
-      "su": "Turkey"
+      "en": "Turkey",
+      "pl": "Turcja"
     },
     "code": "TR",
     "name": "Turkey",
@@ -2245,10 +1871,8 @@
   },
   {
     "name_translations": {
-      "en": "Somalia"
-    },
-    "cases": {
-      "su": "Somalia"
+      "en": "Somalia",
+      "pl": "Somalia"
     },
     "code": "SO",
     "name": "Somalia",
@@ -2257,10 +1881,8 @@
   },
   {
     "name_translations": {
-      "en": "Greenland"
-    },
-    "cases": {
-      "su": "Greenland"
+      "en": "Greenland",
+      "pl": "Grenlandia"
     },
     "code": "GL",
     "name": "Greenland",
@@ -2269,10 +1891,8 @@
   },
   {
     "name_translations": {
-      "en": "Jamaica"
-    },
-    "cases": {
-      "su": "Jamaica"
+      "en": "Jamaica",
+      "pl": "Jamajka"
     },
     "code": "JM",
     "name": "Jamaica",
@@ -2281,10 +1901,8 @@
   },
   {
     "name_translations": {
-      "en": "Botswana"
-    },
-    "cases": {
-      "su": "Botswana"
+      "en": "Botswana",
+      "pl": "Botswana"
     },
     "code": "BW",
     "name": "Botswana",
@@ -2293,10 +1911,8 @@
   },
   {
     "name_translations": {
-      "en": "Finland"
-    },
-    "cases": {
-      "su": "Finland"
+      "en": "Finland",
+      "pl": "Finlandia"
     },
     "code": "FI",
     "name": "Finland",
@@ -2305,10 +1921,8 @@
   },
   {
     "name_translations": {
-      "en": "Benin"
-    },
-    "cases": {
-      "su": "Benin"
+      "en": "Benin",
+      "pl": "Benin"
     },
     "code": "BJ",
     "name": "Benin",
@@ -2317,10 +1931,8 @@
   },
   {
     "name_translations": {
-      "en": "Wallis and Futuna"
-    },
-    "cases": {
-      "su": "Wallis and Futuna"
+      "en": "Wallis and Futuna",
+      "pl": "Wallis i Futuna"
     },
     "code": "WF",
     "name": "Wallis and Futuna",
@@ -2329,10 +1941,8 @@
   },
   {
     "name_translations": {
-      "en": "Australia"
-    },
-    "cases": {
-      "su": "Australia"
+      "en": "Australia",
+      "pl": "Australia"
     },
     "code": "AU",
     "name": "Australia",
@@ -2341,10 +1951,8 @@
   },
   {
     "name_translations": {
-      "en": "Singapore"
-    },
-    "cases": {
-      "su": "Singapore"
+      "en": "Singapore",
+      "pl": "Singapur"
     },
     "code": "SG",
     "name": "Singapore",
@@ -2353,10 +1961,8 @@
   },
   {
     "name_translations": {
-      "en": "Mali"
-    },
-    "cases": {
-      "su": "Mali"
+      "en": "Mali",
+      "pl": "Mali"
     },
     "code": "ML",
     "name": "Mali",
@@ -2365,10 +1971,8 @@
   },
   {
     "name_translations": {
-      "en": "Tonga"
-    },
-    "cases": {
-      "su": "Tonga"
+      "en": "Tonga",
+      "pl": "Tonga"
     },
     "code": "TO",
     "name": "Tonga",
@@ -2377,10 +1981,8 @@
   },
   {
     "name_translations": {
-      "en": "Canada"
-    },
-    "cases": {
-      "su": "Canada"
+      "en": "Canada",
+      "pl": "Kanada"
     },
     "code": "CA",
     "name": "Canada",
@@ -2389,10 +1991,8 @@
   },
   {
     "name_translations": {
-      "en": "Norfolk Island"
-    },
-    "cases": {
-      "su": "Norfolk Island"
+      "en": "Norfolk Island",
+      "pl": "Norfolk"
     },
     "code": "NF",
     "name": "Norfolk Island",
@@ -2401,10 +2001,8 @@
   },
   {
     "name_translations": {
-      "en": "Estonia"
-    },
-    "cases": {
-      "su": "Estonia"
+      "en": "Estonia",
+      "pl": "Estonia"
     },
     "code": "EE",
     "name": "Estonia",
@@ -2413,10 +2011,8 @@
   },
   {
     "name_translations": {
-      "en": "Luxembourg"
-    },
-    "cases": {
-      "su": "Luxembourg"
+      "en": "Luxembourg",
+      "pl": "Luksemburg"
     },
     "code": "LU",
     "name": "Luxembourg",
@@ -2425,10 +2021,8 @@
   },
   {
     "name_translations": {
-      "en": "Republic of the Congo"
-    },
-    "cases": {
-      "su": "Republic of the Congo"
+      "en": "Republic of the Congo",
+      "pl": "Republika Konga"
     },
     "code": "CG",
     "name": "Republic of the Congo",
@@ -2437,10 +2031,8 @@
   },
   {
     "name_translations": {
-      "en": "Guyana"
-    },
-    "cases": {
-      "su": "Guyana"
+      "en": "Guyana",
+      "pl": "Gujana"
     },
     "code": "GY",
     "name": "Guyana",
@@ -2449,10 +2041,8 @@
   },
   {
     "name_translations": {
-      "en": "Central African Republic"
-    },
-    "cases": {
-      "su": "Central African Republic"
+      "en": "Central African Republic",
+      "pl": "Republika Środkowoafrykańska"
     },
     "code": "CF",
     "name": "Central African Republic",
@@ -2461,10 +2051,8 @@
   },
   {
     "name_translations": {
-      "en": "Guam"
-    },
-    "cases": {
-      "su": "Guam"
+      "en": "Guam",
+      "pl": "Guam"
     },
     "code": "GU",
     "name": "Guam",
@@ -2473,10 +2061,8 @@
   },
   {
     "name_translations": {
-      "en": "Puerto Rico"
-    },
-    "cases": {
-      "su": "Puerto Rico"
+      "en": "Puerto Rico",
+      "pl": "Portoryko"
     },
     "code": "PR",
     "name": "Puerto Rico",
@@ -2485,10 +2071,8 @@
   },
   {
     "name_translations": {
-      "en": "São Tomé and Príncipe"
-    },
-    "cases": {
-      "su": "São Tomé and Príncipe"
+      "en": "São Tomé and Príncipe",
+      "pl": "Wyspy Świętego Tomasza i Książęca"
     },
     "code": "ST",
     "name": "São Tomé and Príncipe",
@@ -2497,10 +2081,8 @@
   },
   {
     "name_translations": {
-      "en": "South Korea"
-    },
-    "cases": {
-      "su": "South Korea"
+      "en": "South Korea",
+      "pl": "Korea Południowa"
     },
     "code": "KR",
     "name": "South Korea",
@@ -2509,10 +2091,8 @@
   },
   {
     "name_translations": {
-      "en": "Chile"
-    },
-    "cases": {
-      "su": "Chile"
+      "en": "Chile",
+      "pl": "Chile"
     },
     "code": "CL",
     "name": "Chile",
@@ -2521,10 +2101,8 @@
   },
   {
     "name_translations": {
-      "en": "Kiribati"
-    },
-    "cases": {
-      "su": "Kiribati"
+      "en": "Kiribati",
+      "pl": "Kiribati"
     },
     "code": "KI",
     "name": "Kiribati",
@@ -2533,10 +2111,8 @@
   },
   {
     "name_translations": {
-      "en": "Samoa"
-    },
-    "cases": {
-      "su": "Samoa"
+      "en": "Samoa",
+      "pl": "Samoa"
     },
     "code": "WS",
     "name": "Samoa",
@@ -2545,10 +2121,8 @@
   },
   {
     "name_translations": {
-      "en": "Réunion"
-    },
-    "cases": {
-      "su": "Réunion"
+      "en": "Réunion",
+      "pl": "Reunion"
     },
     "code": "RE",
     "name": "Réunion",
@@ -2557,10 +2131,8 @@
   },
   {
     "name_translations": {
-      "en": "Burundi"
-    },
-    "cases": {
-      "su": "Burundi"
+      "en": "Burundi",
+      "pl": "Burundi"
     },
     "code": "BI",
     "name": "Burundi",
@@ -2569,10 +2141,8 @@
   },
   {
     "name_translations": {
-      "en": "Egypt"
-    },
-    "cases": {
-      "su": "Egypt"
+      "en": "Egypt",
+      "pl": "Egipt"
     },
     "code": "EG",
     "name": "Egypt",
@@ -2581,10 +2151,8 @@
   },
   {
     "name_translations": {
-      "en": "Åland Islands"
-    },
-    "cases": {
-      "su": "Åland Islands"
+      "en": "Åland Islands",
+      "pl": "Wyspy Alandzkie"
     },
     "code": "AX",
     "name": "Åland Islands",
@@ -2593,10 +2161,8 @@
   },
   {
     "name_translations": {
-      "en": "Eswatini"
-    },
-    "cases": {
-      "su": "Eswatini"
+      "en": "Eswatini",
+      "pl": "Suazi"
     },
     "code": "SZ",
     "name": "Eswatini",
@@ -2605,10 +2171,8 @@
   },
   {
     "name_translations": {
-      "en": "Slovenia"
-    },
-    "cases": {
-      "su": "Slovenia"
+      "en": "Slovenia",
+      "pl": "Słowenia"
     },
     "code": "SI",
     "name": "Slovenia",
@@ -2617,10 +2181,8 @@
   },
   {
     "name_translations": {
-      "en": "Nepal"
-    },
-    "cases": {
-      "su": "Nepal"
+      "en": "Nepal",
+      "pl": "Nepal"
     },
     "code": "NP",
     "name": "Nepal",
@@ -2629,10 +2191,8 @@
   },
   {
     "name_translations": {
-      "en": "Equatorial Guinea"
-    },
-    "cases": {
-      "su": "Equatorial Guinea"
+      "en": "Equatorial Guinea",
+      "pl": "Gwinea Równikowa"
     },
     "code": "GQ",
     "name": "Equatorial Guinea",
@@ -2641,10 +2201,8 @@
   },
   {
     "name_translations": {
-      "en": "Philippines"
-    },
-    "cases": {
-      "su": "Philippines"
+      "en": "Philippines",
+      "pl": "Filipiny"
     },
     "code": "PH",
     "name": "Philippines",
@@ -2653,10 +2211,8 @@
   },
   {
     "name_translations": {
-      "en": "Paraguay"
-    },
-    "cases": {
-      "su": "Paraguay"
+      "en": "Paraguay",
+      "pl": "Paragwaj"
     },
     "code": "PY",
     "name": "Paraguay",
@@ -2665,10 +2221,8 @@
   },
   {
     "name_translations": {
-      "en": "Democratic Republic of the Congo"
-    },
-    "cases": {
-      "su": "Democratic Republic of the Congo"
+      "en": "Democratic Republic of the Congo",
+      "pl": "Demokratyczna Republika Konga"
     },
     "code": "CD",
     "name": "Democratic Republic of the Congo",
@@ -2677,10 +2231,8 @@
   },
   {
     "name_translations": {
-      "en": "Burkina Faso"
-    },
-    "cases": {
-      "su": "Burkina Faso"
+      "en": "Burkina Faso",
+      "pl": "Burkina Faso"
     },
     "code": "BF",
     "name": "Burkina Faso",
@@ -2689,10 +2241,8 @@
   },
   {
     "name_translations": {
-      "en": "Kosovo"
-    },
-    "cases": {
-      "su": "Kosovo"
+      "en": "Kosovo",
+      "pl": "Kosowo"
     },
     "code": "XK",
     "name": "Kosovo",
@@ -2701,10 +2251,8 @@
   },
   {
     "name_translations": {
-      "en": "Ukraine"
-    },
-    "cases": {
-      "su": "Ukraine"
+      "en": "Ukraine",
+      "pl": "Ukraina"
     },
     "code": "UA",
     "name": "Ukraine",
@@ -2713,10 +2261,8 @@
   },
   {
     "name_translations": {
-      "en": "France"
-    },
-    "cases": {
-      "su": "France"
+      "en": "France",
+      "pl": "Francja"
     },
     "code": "FR",
     "name": "France",
@@ -2725,10 +2271,8 @@
   },
   {
     "name_translations": {
-      "en": "Azerbaijan"
-    },
-    "cases": {
-      "su": "Azerbaijan"
+      "en": "Azerbaijan",
+      "pl": "Azerbejdżan"
     },
     "code": "AZ",
     "name": "Azerbaijan",
@@ -2737,10 +2281,8 @@
   },
   {
     "name_translations": {
-      "en": "Isle of Man"
-    },
-    "cases": {
-      "su": "Isle of Man"
+      "en": "Isle of Man",
+      "pl": "Wyspa Man"
     },
     "code": "IM",
     "name": "Isle of Man",
@@ -2749,10 +2291,8 @@
   },
   {
     "name_translations": {
-      "en": "Costa Rica"
-    },
-    "cases": {
-      "su": "Costa Rica"
+      "en": "Costa Rica",
+      "pl": "Kostaryka"
     },
     "code": "CR",
     "name": "Costa Rica",
@@ -2761,10 +2301,8 @@
   },
   {
     "name_translations": {
-      "en": "Gabon"
-    },
-    "cases": {
-      "su": "Gabon"
+      "en": "Gabon",
+      "pl": "Gabon"
     },
     "code": "GA",
     "name": "Gabon",
@@ -2773,10 +2311,8 @@
   },
   {
     "name_translations": {
-      "en": "Syria"
-    },
-    "cases": {
-      "su": "Syria"
+      "en": "Syria",
+      "pl": "Syria"
     },
     "code": "SY",
     "name": "Syria",
@@ -2785,10 +2321,8 @@
   },
   {
     "name_translations": {
-      "en": "Saint Martin"
-    },
-    "cases": {
-      "su": "Saint Martin"
+      "en": "Saint Martin",
+      "pl": "Saint-Martin"
     },
     "code": "MF",
     "name": "Saint Martin",
@@ -2797,10 +2331,8 @@
   },
   {
     "name_translations": {
-      "en": "Israel"
-    },
-    "cases": {
-      "su": "Israel"
+      "en": "Israel",
+      "pl": "Izrael"
     },
     "code": "IL",
     "name": "Israel",
@@ -2809,10 +2341,8 @@
   },
   {
     "name_translations": {
-      "en": "Cape Verde"
-    },
-    "cases": {
-      "su": "Cape Verde"
+      "en": "Cape Verde",
+      "pl": "Republika Zielonego Przylądka"
     },
     "code": "CV",
     "name": "Cape Verde",
@@ -2821,10 +2351,8 @@
   },
   {
     "name_translations": {
-      "en": "Guernsey"
-    },
-    "cases": {
-      "su": "Guernsey"
+      "en": "Guernsey",
+      "pl": "Wyspa Guernsey"
     },
     "code": "GG",
     "name": "Guernsey",

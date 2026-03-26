@@ -3,13 +3,14 @@ from datetime import datetime, date, timedelta
 from src.database import db
 from src.models.flight import FlightOffer, FlightOffersResponse, CacheInfo, FlightPricesCacheInfo
 from src.services.api_client import aviasales_client
+from src.config import settings
 import logging
 import json
 
 logger = logging.getLogger(__name__)
 
 # Debug flag - set to False to disable debug logging
-DEBUG_PRICE_SERVICE = True
+DEBUG_PRICE_SERVICE = settings.debug_price_service
 
 def debug_log(message: str):
     """Log debug message if DEBUG_PRICE_SERVICE is enabled"""
@@ -21,7 +22,7 @@ class FlightPriceService:
     """Service for managing flight prices from Aviasales API"""
 
     # Cache expiry time in hours
-    CACHE_EXPIRY_HOURS = 6
+    CACHE_EXPIRY_HOURS = settings.price_cache_expiry_hours
 
     @staticmethod
     async def get_cache_info(
@@ -54,21 +55,20 @@ class FlightPriceService:
         origin_city_code: str,
         destination_city_code: str,
         departure_date: date,
-        currency: str = "PLN"
+        currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
         """Check if cache exists and is still valid for the given currency"""
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
-                SELECT MAX(created_at) as last_fetched
-                FROM flight_offers
+                SELECT last_fetched_at as last_fetched
+                FROM flight_prices_cache
                 WHERE origin_city_code = $1
                   AND destination_city_code = $2
-                  AND DATE(departure_at) = $3
-                  AND currency = $4
-            """, origin_city_code, destination_city_code, departure_date, currency.upper())
+                  AND departure_date = $3
+            """, origin_city_code, destination_city_code, departure_date)
 
         if not row or not row['last_fetched']:
-            debug_log(f"No price cache for {origin_city_code}->{destination_city_code} on {departure_date} in {currency}")
+            debug_log(f"No price cache for {origin_city_code}->{destination_city_code} on {departure_date}")
             return False, None
 
         last_fetched = row['last_fetched']
@@ -86,7 +86,7 @@ class FlightPriceService:
         origin_city_code: str,
         destination_city_code: str,
         search_date: date,
-        currency: str = "PLN"
+        currency: str = settings.default_currency
     ) -> Optional[Dict[str, Any]]:
         """Parse flight offer from Aviasales API response"""
         try:
@@ -183,7 +183,7 @@ class FlightPriceService:
         origin_city_code: str,
         destination_city_code: str,
         departure_date: date,
-        currency: str = "PLN"
+        currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
         """Fetch prices from API and cache them"""
         debug_log(f"Fetching prices for {origin_city_code}->{destination_city_code} on {departure_date} in {currency}")
@@ -199,7 +199,7 @@ class FlightPriceService:
             currency=currency,
             one_way=True,
             direct=True,
-            limit=1000
+            limit=settings.aviasales_default_limit
         )
 
         if not api_response or not api_response.get('success'):
@@ -237,7 +237,7 @@ class FlightPriceService:
         departure_date: date,
         origin_city_code: Optional[str] = None,
         destination_city_code: Optional[str] = None,
-        currency: str = "PLN",
+        currency: str = settings.default_currency,
         force_refresh: bool = False
     ) -> FlightOffersResponse:
         """
@@ -322,7 +322,7 @@ class FlightPriceService:
         origin_city_code: str,
         destination_city_code: str,
         departure_date: date,
-        currency: str = "PLN",
+        currency: str = settings.default_currency,
         force_refresh: bool = False
     ) -> FlightOffersResponse:
         """

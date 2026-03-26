@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta, time
 from src.database import db
 from src.models.flight import Flight, FlightsResponse, CacheInfo, AirportSchedulesCacheInfo
 from src.services.api_client import aerodatabox_client
+from src.config import settings
 import logging
 import json
 import pytz
@@ -12,7 +13,7 @@ import time as time_module
 logger = logging.getLogger(__name__)
 
 # Debug flag - set to False to disable debug logging
-DEBUG_FLIGHT_SERVICE = True
+DEBUG_FLIGHT_SERVICE = settings.debug_flight_service
 
 def debug_log(message: str):
     """Log debug message if DEBUG_FLIGHT_SERVICE is enabled"""
@@ -24,10 +25,10 @@ class FlightScheduleService:
     """Service for managing flight schedules from AeroDataBox API"""
 
     # Cache expiry time in hours
-    CACHE_EXPIRY_HOURS = 1
+    CACHE_EXPIRY_HOURS = settings.flight_cache_expiry_hours
 
     # Rate limiting: minimum time between API calls (in seconds)
-    MIN_API_CALL_INTERVAL = 1.5
+    MIN_API_CALL_INTERVAL = settings.aerodatabox_api_call_interval
 
     # Track last API call time
     _last_api_call_time = 0.0
@@ -46,18 +47,18 @@ class FlightScheduleService:
     async def find_cache_for_datetime(
         airport_code: str,
         from_local_datetime: datetime,
-        direction: str = "Departure"
+        direction: str = settings.default_flight_direction
     ) -> Optional[Dict]:
         """Find a valid (non-expired) cache entry covering the given local datetime"""
         async with db.get_connection() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(f"""
                 SELECT id, last_fetched_at, fetch_from_local, fetch_to_local
                 FROM airport_schedules_cache
                 WHERE airport_code = $1
                   AND direction = $2
                   AND fetch_from_local <= $3
                   AND fetch_to_local > $3
-                  AND last_fetched_at > (NOW() - INTERVAL '1 hour')
+                  AND last_fetched_at > (NOW() - INTERVAL '{settings.flight_cache_expiry_hours} hour')
                 ORDER BY fetch_from_local DESC
                 LIMIT 1
             """, airport_code, direction, from_local_datetime)
@@ -70,7 +71,7 @@ class FlightScheduleService:
     async def get_cache_info(
         airport_code: str,
         search_date: date,
-        direction: str = "Departure"
+        direction: str = settings.default_flight_direction
     ) -> CacheInfo:
         """Get cache information for airport schedules (most recent window for the given date)"""
         async with db.get_connection() as conn:
@@ -302,7 +303,7 @@ class FlightScheduleService:
     async def fetch_and_cache_schedules(
         airport_code: str,
         from_local_datetime: Optional[datetime] = None,
-        direction: str = "Departure"
+        direction: str = settings.default_flight_direction
     ) -> Tuple[bool, Optional[datetime], Optional[datetime]]:
         """
         Fetch schedules from API for a 12h window starting at from_local_datetime.
@@ -337,7 +338,7 @@ class FlightScheduleService:
             from_time = local_now.replace(tzinfo=None)
 
         # AeroDataBox allows max 12 hour range
-        to_time = from_time + timedelta(hours=12)
+        to_time = from_time + timedelta(hours=settings.aerodatabox_window_hours)
 
         # search_date for flights table (date of from_time)
         search_date = from_time.date()
@@ -413,7 +414,8 @@ class FlightScheduleService:
         from_local_datetime: Optional[datetime] = None,
         search_date: Optional[date] = None,
         limit: int = 200,
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        lang: str = 'en'
     ) -> FlightsResponse:
         """
         Get departing flights from airport starting from from_local_datetime.
@@ -425,7 +427,7 @@ class FlightScheduleService:
             limit: Max number of results (default 200 to get full 12h window)
             force_refresh: Force refresh from API
         """
-        direction = "Departure"
+        direction = settings.default_flight_direction
 
         # Resolve from_local_datetime
         if from_local_datetime is None:
@@ -459,8 +461,9 @@ class FlightScheduleService:
         last_fetched = cache_info['last_fetched_at']
 
         # Query flights in the window
+        lang = lang if lang in ('en', 'pl') else 'en'
         async with db.get_connection() as conn:
-            rows = await conn.fetch("""
+            rows = await conn.fetch(f"""
                 SELECT
                     f.id, f.flight_number, f.airline_code,
                     f.origin_airport_code, f.destination_airport_code,
@@ -472,11 +475,11 @@ class FlightScheduleService:
                     f.arrival_terminal, f.arrival_gate,
                     f.search_date, f.created_at,
                     a1.name as airline_name,
-                    ap1.name as origin_airport_name,
-                    ap2.name as destination_airport_name,
-                    c1.name as origin_city_name,
+                    COALESCE(ap1.name_translations->>'{lang}', ap1.name) as origin_airport_name,
+                    COALESCE(ap2.name_translations->>'{lang}', ap2.name) as destination_airport_name,
+                    COALESCE(c1.name_translations->>'{lang}', c1.name) as origin_city_name,
                     c1.code as origin_city_code,
-                    c2.name as destination_city_name,
+                    COALESCE(c2.name_translations->>'{lang}', c2.name) as destination_city_name,
                     c2.code as destination_city_code
                 FROM flights f
                 LEFT JOIN airlines a1 ON f.airline_code = a1.code

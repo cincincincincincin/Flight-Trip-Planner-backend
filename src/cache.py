@@ -34,8 +34,8 @@ class RedisCache:
                 settings.redis_url,
                 encoding="utf-8",
                 decode_responses=True,
-                socket_connect_timeout=2,
-                socket_timeout=2,
+                socket_connect_timeout=settings.redis_connect_timeout,
+                socket_timeout=settings.redis_socket_timeout,
             )
             await self._client.ping()  # type: ignore[misc]
             logger.info("Redis connected successfully")

@@ -5,17 +5,18 @@ from src.models.route import RoutesResponse, RouteResponse
 from pydantic import BaseModel
 from src.cache import cache
 from src.limiter import limiter
+from src.config import settings
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
-TTL_GEOJSON = 86400
+TTL_GEOJSON = settings.cache_ttl_geojson
 
 # Model dla odpowiedzi count
 class RoutesCountResponse(BaseModel):
     count: int
 
 @router.get("/count", response_model=RoutesCountResponse)
-@limiter.limit("200/minute")
+@limiter.limit(settings.rate_limit_airports)
 async def get_routes_count(request: Request):
     """Get total count of routes"""
     try:
@@ -25,7 +26,7 @@ async def get_routes_count(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/", response_model=RoutesResponse)
-@limiter.limit("200/minute")
+@limiter.limit(settings.rate_limit_airports)
 async def get_routes(
     request: Request,
     airline_iata: Optional[str] = Query(None, description="Filter by airline IATA code"),
@@ -59,7 +60,7 @@ async def get_routes(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/geojson")
-@limiter.limit("200/minute")
+@limiter.limit(settings.rate_limit_airports)
 async def get_routes_geojson(
     request: Request,
     airline_iata: Optional[str] = Query(None, description="Filter by airline IATA code"),
@@ -75,7 +76,7 @@ async def get_routes_geojson(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{route_id}", response_model=RouteResponse)
-@limiter.limit("200/minute")
+@limiter.limit(settings.rate_limit_airports)
 async def get_route(request: Request, route_id: int):
     """Get route by ID"""
     route = await route_service.get_route_by_id(route_id)

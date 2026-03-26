@@ -12,9 +12,9 @@ class Database:
         """Create connection pool"""
         self.pool = await asyncpg.create_pool(
             settings.database_url,
-            min_size=5,
-            max_size=20,
-            command_timeout=60,
+            min_size=settings.database_pool_min_size,
+            max_size=settings.database_pool_max_size,
+            command_timeout=settings.database_command_timeout,
             init=self._init_connection
         )
     
