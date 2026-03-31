@@ -151,27 +151,6 @@ async def get_city_by_code(
         logger.error(f"[ENDPOINT ERROR] /search/city/{code}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting city: {str(e)}")
 
-@router.get("/country/{code}")
-@limiter.limit(settings.rate_limit_airports)
-async def get_country_by_code(
-    request: Request,
-    code: str,
-    lang: str = Query('en', description="Language for localized names (en/pl)")
-):
-    """Get country by code with full details"""
-    try:
-        logger.info(f"[ENDPOINT] GET /search/country/{code}")
-        key = f"search:country:{code.upper()}:{lang}"
-        result = await cache.cached(key, TTL_ENTITY, lambda: search_service.get_country_by_code(code, lang))
-        if not result:
-            raise HTTPException(status_code=404, detail=f"Country {code} not found")
-        return {"success": True, "data": result}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"[ENDPOINT ERROR] /search/country/{code}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting country: {str(e)}")
-
 # ================ EXPAND ENDPOINTS (For UI expanding) ================
 
 @router.get("/countries/{country_code}/cities")
@@ -282,30 +261,6 @@ async def get_airports_in_city(
         logger.error(f"[ENDPOINT ERROR] /search/cities/{city_code}/airports: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting airports: {str(e)}")
 
-# ================ HEALTH CHECK ================
-
-@router.get("/health")
-@limiter.limit(settings.rate_limit_search)
-async def search_health(request: Request):
-    """Health check for search endpoints"""
-    try:
-        # Quick test query
-        test_countries = await search_service.get_phase1_countries("", 0, 1, "prefix")
-        
-        return {
-            "status": "healthy",
-            "service": "search",
-            "database": "connected",
-            "test_query": {
-                "countries_returned": len(test_countries),
-                "timestamp": "now"
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"[HEALTH CHECK ERROR] Search service unhealthy: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Search service unhealthy: {str(e)}")
-    
 @router.get("/country/{code}/center")
 @limiter.limit(settings.rate_limit_airports)
 async def get_country_center(request: Request, code: str):
