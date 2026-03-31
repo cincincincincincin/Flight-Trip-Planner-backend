@@ -82,6 +82,11 @@ async def unified_search(
         if not has_more and result["next_phase_available"]:
             has_more = True
 
+        # Exact IATA code match — included so the frontend doesn't need a separate request
+        exact_match = None
+        if len(q.strip()) == 3:
+            exact_match = await search_service.get_airport_by_code(q.strip().upper(), lang)
+
         response = {
             "success": True,
             "query": q,
@@ -98,7 +103,8 @@ async def unified_search(
                 "has_phase3": has_phase3,
                 "total_in_current_phase": result.get("total_in_phase", 0),
                 "next_phase_available": result.get("next_phase_available", False)
-            }
+            },
+            "exact_match": exact_match,
         }
         await cache.set(key, response, TTL_SEARCH)
         return response

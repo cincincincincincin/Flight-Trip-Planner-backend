@@ -300,6 +300,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Funkcja do sprawdzania czy są zcache'owane ceny dla miast i daty
+-- TTL: 6 godzin — spójne z price_cache_expiry_hours w Python
 CREATE OR REPLACE FUNCTION has_cached_prices(
     origin_city_param VARCHAR,
     destination_city_param VARCHAR,
@@ -314,6 +315,7 @@ BEGIN
         WHERE origin_city_code = origin_city_param
           AND destination_city_code = destination_city_param
           AND departure_date = departure_date_param
+          AND last_fetched_at > (NOW() - INTERVAL '6 hours')
     ) INTO has_cache;
 
     RETURN has_cache;
@@ -403,90 +405,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ============================================
--- TABELE DLA PLANOWANIA PODRÓŻY
--- ============================================
-
--- Podróże użytkownika
-CREATE TABLE IF NOT EXISTS trips (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200),
-    start_airport_code VARCHAR(4) NOT NULL,
-    start_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (start_airport_code) REFERENCES airports(code) ON DELETE CASCADE
-);
-
--- Loty w podróży
-CREATE TABLE IF NOT EXISTS trip_flights (
-    id SERIAL PRIMARY KEY,
-    trip_id INTEGER NOT NULL,
-    flight_id INTEGER NOT NULL,
-    flight_order INTEGER NOT NULL,
-    added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
-    FOREIGN KEY (flight_id) REFERENCES flights(id) ON DELETE CASCADE,
-    UNIQUE(trip_id, flight_order)
-);
-
--- Zapisane oferty biletów dla lotów w podróży
-CREATE TABLE IF NOT EXISTS trip_flight_prices (
-    id SERIAL PRIMARY KEY,
-    trip_flight_id INTEGER NOT NULL,
-    offer_id INTEGER,
-    price DECIMAL(10, 2),
-    currency VARCHAR(3),
-    link TEXT,
-    found_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (trip_flight_id) REFERENCES trip_flights(id) ON DELETE CASCADE,
-    FOREIGN KEY (offer_id) REFERENCES flight_offers(id) ON DELETE SET NULL
-);
-
--- Indeksy
-CREATE INDEX idx_trips_start_airport ON trips(start_airport_code);
-CREATE INDEX idx_trips_start_date ON trips(start_date);
-CREATE INDEX idx_trip_flights_trip ON trip_flights(trip_id);
-CREATE INDEX idx_trip_flights_order ON trip_flights(trip_id, flight_order);
-CREATE INDEX idx_trip_prices_trip_flight ON trip_flight_prices(trip_flight_id);
-
--- Funkcja do pobierania podróży z lotami
-CREATE OR REPLACE FUNCTION get_trip_details(trip_id_param INTEGER)
-RETURNS TABLE(
-    trip_id INTEGER,
-    trip_name VARCHAR,
-    start_airport_code VARCHAR,
-    start_date DATE,
-    flight_order INTEGER,
-    flight_number VARCHAR,
-    origin_airport_code VARCHAR,
-    destination_airport_code VARCHAR,
-    scheduled_departure_utc TIMESTAMP WITH TIME ZONE,
-    price DECIMAL,
-    currency VARCHAR
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        t.id,
-        t.name,
-        t.start_airport_code,
-        t.start_date,
-        tf.flight_order,
-        f.flight_number,
-        f.origin_airport_code,
-        f.destination_airport_code,
-        f.scheduled_departure_utc,
-        tfp.price,
-        tfp.currency
-    FROM trips t
-    JOIN trip_flights tf ON t.id = tf.trip_id
-    JOIN flights f ON tf.flight_id = f.id
-    LEFT JOIN trip_flight_prices tfp ON tf.id = tfp.trip_flight_id
-    WHERE t.id = trip_id_param
-    ORDER BY tf.flight_order;
-END;
-$$ LANGUAGE plpgsql;
 
 -- ============================================
 -- 9. GRANTY (jeśli używasz różnych użytkowników)

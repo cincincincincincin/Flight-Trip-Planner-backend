@@ -99,6 +99,20 @@ class Settings(BaseSettings):
             raise ValueError('DATABASE_URL must not be empty')
         return v
 
+    @field_validator('aerodatabox_api_key')
+    @classmethod
+    def aerodatabox_api_key_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError('AERODATABOX_API_KEY must not be empty')
+        return v
+
+    @field_validator('aviasales_api_token')
+    @classmethod
+    def aviasales_api_token_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError('AVIASALES_API_TOKEN must not be empty')
+        return v
+
     @field_validator('log_level')
     @classmethod
     def log_level_valid(cls, v: str) -> str:
