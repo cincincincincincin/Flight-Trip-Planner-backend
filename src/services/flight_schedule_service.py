@@ -203,98 +203,101 @@ class FlightScheduleService:
             return None
 
     @staticmethod
-    async def _save_flights_to_db(flights_data: List[Dict[str, Any]]) -> int:
-        """Save parsed flights to database"""
+    async def _save_flights_to_db(conn, flights_data: List[Dict[str, Any]]) -> int:
+        """Save parsed flights to database using the provided connection.
+
+        The caller is responsible for connection lifecycle and transaction management.
+        Raises on individual insert errors so the caller's transaction is rolled back.
+        """
         saved_count = 0
         skipped_count = 0
-        async with db.get_connection() as conn:
-            for flight_data in flights_data:
-                try:
-                    # Validate that all required foreign keys exist in database
-                    # Check origin airport (if not None)
-                    if flight_data.get('origin_airport_code'):
-                        origin_exists = await conn.fetchval(
-                            "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
-                            flight_data['origin_airport_code']
-                        )
-                        if not origin_exists:
-                            debug_log(f"Skipping flight {flight_data.get('flight_number')}: origin airport {flight_data['origin_airport_code']} not in database")
-                            skipped_count += 1
-                            continue
-
-                    # Check destination airport (if not None)
-                    if flight_data.get('destination_airport_code'):
-                        dest_exists = await conn.fetchval(
-                            "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
-                            flight_data['destination_airport_code']
-                        )
-                        if not dest_exists:
-                            debug_log(f"Skipping flight {flight_data.get('flight_number')}: destination airport {flight_data['destination_airport_code']} not in database")
-                            skipped_count += 1
-                            continue
-
-                    # Check airline (if not None)
-                    if flight_data.get('airline_code'):
-                        airline_exists = await conn.fetchval(
-                            "SELECT EXISTS(SELECT 1 FROM airlines WHERE code = $1)",
-                            flight_data['airline_code']
-                        )
-                        if not airline_exists:
-                            debug_log(f"Skipping flight {flight_data.get('flight_number')}: airline {flight_data['airline_code']} not in database")
-                            skipped_count += 1
-                            continue
-
-                    # All foreign keys validated, proceed with insert
-                    await conn.execute("""
-                        INSERT INTO flights (
-                            flight_number, airline_code, origin_airport_code, destination_airport_code,
-                            scheduled_departure_utc, scheduled_departure_local,
-                            scheduled_arrival_utc, scheduled_arrival_local,
-                            revised_departure_utc, predicted_departure_utc, runway_departure_utc,
-                            revised_arrival_utc, predicted_arrival_utc, runway_arrival_utc,
-                            departure_terminal, departure_gate, arrival_terminal, arrival_gate,
-                            search_date, raw_data
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-                        ON CONFLICT (flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
-                        DO UPDATE SET
-                            scheduled_arrival_utc = EXCLUDED.scheduled_arrival_utc,
-                            scheduled_arrival_local = EXCLUDED.scheduled_arrival_local,
-                            revised_departure_utc = EXCLUDED.revised_departure_utc,
-                            predicted_departure_utc = EXCLUDED.predicted_departure_utc,
-                            runway_departure_utc = EXCLUDED.runway_departure_utc,
-                            revised_arrival_utc = EXCLUDED.revised_arrival_utc,
-                            predicted_arrival_utc = EXCLUDED.predicted_arrival_utc,
-                            runway_arrival_utc = EXCLUDED.runway_arrival_utc,
-                            departure_gate = EXCLUDED.departure_gate,
-                            arrival_terminal = EXCLUDED.arrival_terminal,
-                            arrival_gate = EXCLUDED.arrival_gate,
-                            raw_data = EXCLUDED.raw_data
-                    """,
-                        flight_data['flight_number'],
-                        flight_data['airline_code'],
-                        flight_data['origin_airport_code'],
-                        flight_data['destination_airport_code'],
-                        flight_data['scheduled_departure_utc'],
-                        flight_data['scheduled_departure_local'],
-                        flight_data['scheduled_arrival_utc'],
-                        flight_data['scheduled_arrival_local'],
-                        flight_data['revised_departure_utc'],
-                        flight_data['predicted_departure_utc'],
-                        flight_data['runway_departure_utc'],
-                        flight_data['revised_arrival_utc'],
-                        flight_data['predicted_arrival_utc'],
-                        flight_data['runway_arrival_utc'],
-                        flight_data['departure_terminal'],
-                        flight_data['departure_gate'],
-                        flight_data['arrival_terminal'],
-                        flight_data['arrival_gate'],
-                        flight_data['search_date'],
-                        json.dumps(flight_data['raw_data'])
+        for flight_data in flights_data:
+            try:
+                # Validate that all required foreign keys exist in database
+                # Check origin airport (if not None)
+                if flight_data.get('origin_airport_code'):
+                    origin_exists = await conn.fetchval(
+                        "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
+                        flight_data['origin_airport_code']
                     )
-                    saved_count += 1
-                except Exception as e:
-                    logger.error(f"Error saving flight {flight_data.get('flight_number')}: {str(e)}")
-                    continue
+                    if not origin_exists:
+                        debug_log(f"Skipping flight {flight_data.get('flight_number')}: origin airport {flight_data['origin_airport_code']} not in database")
+                        skipped_count += 1
+                        continue
+
+                # Check destination airport (if not None)
+                if flight_data.get('destination_airport_code'):
+                    dest_exists = await conn.fetchval(
+                        "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
+                        flight_data['destination_airport_code']
+                    )
+                    if not dest_exists:
+                        debug_log(f"Skipping flight {flight_data.get('flight_number')}: destination airport {flight_data['destination_airport_code']} not in database")
+                        skipped_count += 1
+                        continue
+
+                # Check airline (if not None)
+                if flight_data.get('airline_code'):
+                    airline_exists = await conn.fetchval(
+                        "SELECT EXISTS(SELECT 1 FROM airlines WHERE code = $1)",
+                        flight_data['airline_code']
+                    )
+                    if not airline_exists:
+                        debug_log(f"Skipping flight {flight_data.get('flight_number')}: airline {flight_data['airline_code']} not in database")
+                        skipped_count += 1
+                        continue
+
+                # All foreign keys validated, proceed with insert
+                await conn.execute("""
+                    INSERT INTO flights (
+                        flight_number, airline_code, origin_airport_code, destination_airport_code,
+                        scheduled_departure_utc, scheduled_departure_local,
+                        scheduled_arrival_utc, scheduled_arrival_local,
+                        revised_departure_utc, predicted_departure_utc, runway_departure_utc,
+                        revised_arrival_utc, predicted_arrival_utc, runway_arrival_utc,
+                        departure_terminal, departure_gate, arrival_terminal, arrival_gate,
+                        search_date, raw_data
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                    ON CONFLICT (flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
+                    DO UPDATE SET
+                        scheduled_arrival_utc = EXCLUDED.scheduled_arrival_utc,
+                        scheduled_arrival_local = EXCLUDED.scheduled_arrival_local,
+                        revised_departure_utc = EXCLUDED.revised_departure_utc,
+                        predicted_departure_utc = EXCLUDED.predicted_departure_utc,
+                        runway_departure_utc = EXCLUDED.runway_departure_utc,
+                        revised_arrival_utc = EXCLUDED.revised_arrival_utc,
+                        predicted_arrival_utc = EXCLUDED.predicted_arrival_utc,
+                        runway_arrival_utc = EXCLUDED.runway_arrival_utc,
+                        departure_gate = EXCLUDED.departure_gate,
+                        arrival_terminal = EXCLUDED.arrival_terminal,
+                        arrival_gate = EXCLUDED.arrival_gate,
+                        raw_data = EXCLUDED.raw_data
+                """,
+                    flight_data['flight_number'],
+                    flight_data['airline_code'],
+                    flight_data['origin_airport_code'],
+                    flight_data['destination_airport_code'],
+                    flight_data['scheduled_departure_utc'],
+                    flight_data['scheduled_departure_local'],
+                    flight_data['scheduled_arrival_utc'],
+                    flight_data['scheduled_arrival_local'],
+                    flight_data['revised_departure_utc'],
+                    flight_data['predicted_departure_utc'],
+                    flight_data['runway_departure_utc'],
+                    flight_data['revised_arrival_utc'],
+                    flight_data['predicted_arrival_utc'],
+                    flight_data['runway_arrival_utc'],
+                    flight_data['departure_terminal'],
+                    flight_data['departure_gate'],
+                    flight_data['arrival_terminal'],
+                    flight_data['arrival_gate'],
+                    flight_data['search_date'],
+                    json.dumps(flight_data['raw_data'])
+                )
+                saved_count += 1
+            except Exception as e:
+                logger.error(f"Error saving flight {flight_data.get('flight_number')}: {str(e)}")
+                raise
 
         debug_log(f"Saved {saved_count} flights to database, skipped {skipped_count} flights with missing airports/airlines")
         return saved_count
@@ -373,19 +376,7 @@ class FlightScheduleService:
             logger.error(f"Failed to fetch schedules from API for {airport_code}")
             return False, None, None
 
-        # Save raw cache with fetch time range
-        async with db.get_connection() as conn:
-            await conn.execute("""
-                INSERT INTO airport_schedules_cache (airport_code, direction, data, fetch_from_local, fetch_to_local)
-                VALUES ($1, $2, $3, $4, $5)
-                ON CONFLICT (airport_code, direction, fetch_from_local)
-                DO UPDATE SET
-                    last_fetched_at = NOW(),
-                    data = EXCLUDED.data,
-                    fetch_to_local = EXCLUDED.fetch_to_local
-            """, airport_code, direction, json.dumps(api_response), from_time, to_time)
-
-        # Parse and save flights
+        # Parse flights before opening DB connection
         flights_data = []
         departures = api_response.get('departures', [])
         arrivals = api_response.get('arrivals', [])
@@ -393,18 +384,29 @@ class FlightScheduleService:
         for flight in departures:
             parsed = FlightScheduleService._parse_flight_from_api(flight, search_date, is_departure=True)
             if parsed:
-                # Add origin airport code for departures
                 parsed['origin_airport_code'] = airport_code
                 flights_data.append(parsed)
 
         for flight in arrivals:
             parsed = FlightScheduleService._parse_flight_from_api(flight, search_date, is_departure=False)
             if parsed:
-                # Add destination airport code for arrivals
                 parsed['destination_airport_code'] = airport_code
                 flights_data.append(parsed)
 
-        await FlightScheduleService._save_flights_to_db(flights_data)
+        # Save cache entry and flights atomically — if flights insert fails, cache is not marked fresh
+        async with db.get_connection() as conn:
+            async with conn.transaction():
+                await conn.execute("""
+                    INSERT INTO airport_schedules_cache (airport_code, direction, data, fetch_from_local, fetch_to_local)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (airport_code, direction, fetch_from_local)
+                    DO UPDATE SET
+                        last_fetched_at = NOW(),
+                        data = EXCLUDED.data,
+                        fetch_to_local = EXCLUDED.fetch_to_local
+                """, airport_code, direction, json.dumps(api_response), from_time, to_time)
+
+                await FlightScheduleService._save_flights_to_db(conn, flights_data)
 
         return True, datetime.now(), to_time
 

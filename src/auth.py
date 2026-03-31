@@ -79,6 +79,8 @@ async def get_current_user(
                 token,
                 settings.supabase_jwt_secret,
                 algorithms=["HS256"],
+                # verify_aud=False: Supabase sets aud="authenticated", not an app URL.
+                # Token integrity is still guaranteed by the SUPABASE_JWT_SECRET signature.
                 options={"verify_aud": False},
             )
             return payload
@@ -93,6 +95,7 @@ async def get_current_user(
                 token,
                 jwks,
                 algorithms=["RS256", "ES256"],
+                # verify_aud=False: same reason as above — Supabase aud claim is not an app URL.
                 options={"verify_aud": False},
             )
             return payload

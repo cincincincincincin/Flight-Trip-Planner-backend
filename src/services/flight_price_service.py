@@ -132,48 +132,51 @@ class FlightPriceService:
             return None
 
     @staticmethod
-    async def _save_offers_to_db(offers_data: List[Dict[str, Any]]) -> int:
-        """Save parsed offers to database"""
+    async def _save_offers_to_db(conn, offers_data: List[Dict[str, Any]]) -> int:
+        """Save parsed offers to database using the provided connection.
+
+        The caller is responsible for connection lifecycle and transaction management.
+        Raises on individual insert errors so the caller's transaction is rolled back.
+        """
         saved_count = 0
-        async with db.get_connection() as conn:
-            for offer_data in offers_data:
-                try:
-                    await conn.execute("""
-                        INSERT INTO flight_offers (
-                            origin_city_code, destination_city_code,
-                            origin_airport_code, destination_airport_code,
-                            price, currency, airline_code, flight_number,
-                            departure_at, return_at, transfers, return_transfers,
-                            duration, duration_to, duration_back, link, search_date
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-                        ON CONFLICT (origin_airport_code, destination_airport_code, departure_at, flight_number, price)
-                        DO UPDATE SET
-                            duration = EXCLUDED.duration,
-                            duration_to = EXCLUDED.duration_to,
-                            link = EXCLUDED.link
-                    """,
-                        offer_data['origin_city_code'],
-                        offer_data['destination_city_code'],
-                        offer_data['origin_airport_code'],
-                        offer_data['destination_airport_code'],
-                        offer_data['price'],
-                        offer_data['currency'],
-                        offer_data['airline_code'],
-                        offer_data['flight_number'],
-                        offer_data['departure_at'],
-                        offer_data['return_at'],
-                        offer_data['transfers'],
-                        offer_data['return_transfers'],
-                        offer_data['duration'],
-                        offer_data['duration_to'],
-                        offer_data['duration_back'],
-                        offer_data['link'],
-                        offer_data['search_date']
-                    )
-                    saved_count += 1
-                except Exception as e:
-                    logger.error(f"Error saving offer: {str(e)}")
-                    continue
+        for offer_data in offers_data:
+            try:
+                await conn.execute("""
+                    INSERT INTO flight_offers (
+                        origin_city_code, destination_city_code,
+                        origin_airport_code, destination_airport_code,
+                        price, currency, airline_code, flight_number,
+                        departure_at, return_at, transfers, return_transfers,
+                        duration, duration_to, duration_back, link, search_date
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                    ON CONFLICT (origin_airport_code, destination_airport_code, departure_at, flight_number, price)
+                    DO UPDATE SET
+                        duration = EXCLUDED.duration,
+                        duration_to = EXCLUDED.duration_to,
+                        link = EXCLUDED.link
+                """,
+                    offer_data['origin_city_code'],
+                    offer_data['destination_city_code'],
+                    offer_data['origin_airport_code'],
+                    offer_data['destination_airport_code'],
+                    offer_data['price'],
+                    offer_data['currency'],
+                    offer_data['airline_code'],
+                    offer_data['flight_number'],
+                    offer_data['departure_at'],
+                    offer_data['return_at'],
+                    offer_data['transfers'],
+                    offer_data['return_transfers'],
+                    offer_data['duration'],
+                    offer_data['duration_to'],
+                    offer_data['duration_back'],
+                    offer_data['link'],
+                    offer_data['search_date']
+                )
+                saved_count += 1
+            except Exception as e:
+                logger.error(f"Error saving offer: {str(e)}")
+                raise
 
         debug_log(f"Saved {saved_count} offers to database")
         return saved_count
@@ -206,18 +209,7 @@ class FlightPriceService:
             logger.error(f"Failed to fetch prices from API for {origin_city_code}->{destination_city_code}")
             return False, None
 
-        # Save raw cache
-        async with db.get_connection() as conn:
-            await conn.execute("""
-                INSERT INTO flight_prices_cache (origin_city_code, destination_city_code, departure_date, data)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (origin_city_code, destination_city_code, departure_date)
-                DO UPDATE SET
-                    last_fetched_at = NOW(),
-                    data = EXCLUDED.data
-            """, origin_city_code, destination_city_code, departure_date, json.dumps(api_response))
-
-        # Parse and save offers
+        # Parse offers before opening DB connection
         offers_data = []
         for offer in api_response.get('data', []):
             parsed = FlightPriceService._parse_offer_from_api(
@@ -226,7 +218,19 @@ class FlightPriceService:
             if parsed:
                 offers_data.append(parsed)
 
-        await FlightPriceService._save_offers_to_db(offers_data)
+        # Save cache and offers atomically — if offers insert fails, cache is not marked fresh
+        async with db.get_connection() as conn:
+            async with conn.transaction():
+                await conn.execute("""
+                    INSERT INTO flight_prices_cache (origin_city_code, destination_city_code, departure_date, data)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (origin_city_code, destination_city_code, departure_date)
+                    DO UPDATE SET
+                        last_fetched_at = NOW(),
+                        data = EXCLUDED.data
+                """, origin_city_code, destination_city_code, departure_date, json.dumps(api_response))
+
+                await FlightPriceService._save_offers_to_db(conn, offers_data)
 
         return True, datetime.now()
 
