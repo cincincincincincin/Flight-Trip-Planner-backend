@@ -11,7 +11,7 @@ from src.database import db
 from src.cache import cache
 from src.limiter import limiter
 from src.endpoints.airports import router as airports_router
-from src.endpoints.search import router as search_router
+from src.endpoints.countries import router as countries_router
 from src.endpoints.flights import router as flights_router
 from src.endpoints.trips import router as trips_router
 from src.endpoints.preferences import router as preferences_router
@@ -107,7 +107,7 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(airports_router)
-app.include_router(search_router)
+app.include_router(countries_router)
 app.include_router(flights_router)
 app.include_router(trips_router)
 app.include_router(preferences_router)
@@ -121,7 +121,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "airports": "/airports/geojson",
-            "search": "/search",
+            "countries": "/countries/centers",
             "flights": "/flights",
             "trips": "/trips",
         },

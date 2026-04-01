@@ -91,7 +91,7 @@ class AirportService:
                     a.city_code, a.country_code,
                     a.time_zone, a.coordinates,
                     COALESCE(c.name_translations->>'{lang}', c.name) AS city_name,
-                    co.name as country_name
+                    COALESCE(co.name_translations->>'{lang}', co.name) AS country_name
                 FROM airports a
                 LEFT JOIN cities c ON a.city_code = c.code
                 LEFT JOIN countries co ON a.country_code = co.code

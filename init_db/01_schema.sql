@@ -9,7 +9,10 @@ CREATE TABLE countries (
     name VARCHAR(100) NOT NULL,
     name_translations JSONB,
     currency VARCHAR(3),
-    wikipedia_link TEXT
+    wikipedia_link TEXT,
+    center_lon DOUBLE PRECISION,
+    center_lat DOUBLE PRECISION,
+    center_zoom FLOAT
     -- cases JSONB
 );
 
