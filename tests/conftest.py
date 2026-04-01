@@ -4,7 +4,7 @@ import os
 # Pydantic Settings czyta env vars w pierwszej kolejności (przed .env)
 _TEST_DB_URL = os.environ.get(
     "TEST_DATABASE_URL",
-    "postgresql://flightuser:haseleczko@localhost:5431/flights_test",
+    "postgresql://testuser:testpass@localhost:5431/flights_test",
 )
 os.environ["DATABASE_URL"] = _TEST_DB_URL
 os.environ.setdefault("AERODATABOX_API_KEY", "test_key_placeholder")
@@ -133,7 +133,7 @@ def init_test_database():
 async def client(init_test_database):
     """HTTP klient podłączony do aplikacji z testową bazą danych."""
     await db.connect()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:  # type: ignore
         yield ac
     await db.disconnect()
 

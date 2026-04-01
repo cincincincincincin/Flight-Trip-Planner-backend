@@ -1,8 +1,3 @@
--- ============================================
--- INICJALIZACJA BAZY DANYCH - WERSJA OPTYMALIZOWANA
--- ZOSTAWIAMY TYLKO LOTNISKA Z TRASAMI
--- ============================================
-
 -- 1. Usunięcie starych tabel
 DROP TABLE IF EXISTS flight_offers, flight_prices_cache, flights, airport_schedules_cache CASCADE;
 DROP TABLE IF EXISTS airlines, airports, cities, countries CASCADE;

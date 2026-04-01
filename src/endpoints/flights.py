@@ -20,7 +20,7 @@ async def get_airport_flights(
     airport_code: str = Path(..., description="IATA airport code (e.g., 'WAW')"),
     from_local_datetime: Optional[str] = Query(None, description="Start of 12h window in local airport time (YYYY-MM-DDTHH:MM:SS). If omitted, uses current time."),
     search_date: Optional[date] = Query(None, description="Fallback: date to search (uses midnight). Ignored if from_local_datetime is provided."),
-    limit: int = Query(200, ge=1, le=500, description="Max results (default 200 for full 12h window)"),
+    limit: int = Query(200, ge=1, le=2000, description="Max results (default 200 for full 12h window)"),
     force_refresh: bool = Query(False, description="Force refresh from API"),
     lang: str = Query('en', description="Language for localized city/airport names (en/pl)")
 ):

@@ -1,14 +1,10 @@
--- 3. CZYSZCZENIE DANYCH Z PROBLEMAMI
--- ============================================
 
--- 3.1 Usunięcie zbednych wpisów (usunięto logikę flightable)
-
--- 3.3 Usuń miasta z nieistniejącymi krajami
+-- Usuń miasta z nieistniejącymi krajami
 DELETE FROM cities
 WHERE country_code IS NOT NULL
   AND country_code NOT IN (SELECT code FROM countries);
 
--- 3.4 Usuń lotniska z nieistniejącymi miastami lub krajami
+-- Usuń lotniska z nieistniejącymi miastami lub krajami
 DELETE FROM airports
 WHERE (city_code IS NOT NULL AND city_code NOT IN (SELECT code FROM cities))
    OR (country_code IS NOT NULL AND country_code NOT IN (SELECT code FROM countries));
@@ -96,7 +92,6 @@ CREATE INDEX idx_airports_name ON airports(name);
 CREATE INDEX idx_airports_city ON airports(city_code);
 CREATE INDEX idx_airports_country ON airports(country_code);
 
--- CREATE INDEX idx_planes_name ON planes(name);
 
       
 CREATE INDEX idx_countries_translations ON countries USING gin(name_translations);
@@ -104,7 +99,6 @@ CREATE INDEX idx_cities_translations ON cities USING gin(name_translations);
 CREATE INDEX idx_airlines_translations ON airlines USING gin(name_translations);
 CREATE INDEX idx_airports_translations ON airports USING gin(name_translations);
 
--- Indeksy dla wyszukiwania case-insensitive
 CREATE INDEX idx_countries_name_lower ON countries(LOWER(name));
 CREATE INDEX idx_cities_name_lower ON cities(LOWER(name));
 CREATE INDEX idx_airports_name_lower ON airports(LOWER(name));
@@ -130,10 +124,6 @@ CREATE INDEX idx_offers_departure_at ON flight_offers(departure_at);
 CREATE INDEX idx_offers_city_origin_date ON flight_offers(origin_city_code, destination_city_code, search_date);
 CREATE INDEX idx_offers_price ON flight_offers(price);
 CREATE INDEX idx_offers_transfers ON flight_offers(transfers);
-
--- ============================================
--- 6. WIDOKI DLA WYGODY
--- ============================================
 
       
 
@@ -405,16 +395,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
--- ============================================
--- 9. GRANTY (jeśli używasz różnych użytkowników)
--- ============================================
-
--- Przykładowe granty dla użytkownika aplikacji
--- GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_user;
--- GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
--- GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO app_user;
-
--- ============================================
--- KONIEC INICJALIZACJI
--- ============================================
