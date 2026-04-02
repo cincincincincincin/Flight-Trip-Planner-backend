@@ -26341,28 +26341,6 @@
   },
   {
     "name_translations": {
-      "en": "Fort Lauderdale Executive Airport",
-      "pl": "Fort Lauderdale Executive Airport"
-    },
-    "city_code": "FLL",
-    "country_code": "US",
-    "time_zone": "America/New_York",
-    "code": "FXE",
-    "name": "Fort Lauderdale Executive Airport",
-    "coordinates": {
-      "lat": 26.066668,
-      "lon": -80.15
-    },
-    "urls": {
-      "webSite": "http://www.fortlauderdale.gov/fxE/index.htm",
-      "wikipedia": "https://en.wikipedia.org/wiki/Fort_Lauderdale_Executive_Airport",
-      "liveAtc": "https://www.liveatc.net/search/?icao=KFXE",
-      "flightRadar": "https://www.flightradar24.com/26.20,-80.17/14",
-      "googleMaps": "https://www.google.com/maps/@26.197299,-80.170700,14z"
-    }
-  },
-  {
-    "name_translations": {
       "en": "Ontario International Airport",
       "pl": "Ontario k. Los Angeles"
     },
@@ -37181,7 +37159,7 @@
   {
     "name_translations": {
       "en": "Baghdad International Airport",
-      "pl": "wszystkie lotniska w Bagdadzie"
+      "pl": "Baghdad International Airport"
     },
     "city_code": "BGW",
     "country_code": "IQ",
@@ -45284,27 +45262,6 @@
       "liveAtc": "https://www.liveatc.net/search/?icao=KVLD",
       "flightRadar": "https://www.flightradar24.com/30.78,-83.28/14",
       "googleMaps": "https://www.google.com/maps/@30.782499,-83.276702,14z"
-    }
-  },
-  {
-    "name_translations": {
-      "en": "Sacramento Executive Airport",
-      "pl": "wszystkie lotniska w Sacramento"
-    },
-    "city_code": "SAC",
-    "country_code": "US",
-    "time_zone": "America/Los_Angeles",
-    "code": "SAC",
-    "name": "Sacramento Executive Airport",
-    "coordinates": {
-      "lat": 38.05,
-      "lon": -121.933334
-    },
-    "urls": {
-      "webSite": "http://www.sacramento.aero/sac/",
-      "wikipedia": "https://en.wikipedia.org/wiki/Sacramento_Executive_Airport",
-      "flightRadar": "https://www.flightradar24.com/38.51,-121.49/14",
-      "googleMaps": "https://www.google.com/maps/@38.512500,-121.492996,14z"
     }
   },
   {
@@ -58241,7 +58198,7 @@
   {
     "name_translations": {
       "en": "Brandenburg",
-      "pl": "wszystkie lotniska w Berlinie"
+      "pl": "Brandenburg"
     },
     "city_code": "BER",
     "country_code": "DE",

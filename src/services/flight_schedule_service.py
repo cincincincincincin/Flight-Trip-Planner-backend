@@ -44,6 +44,39 @@ class FlightScheduleService:
         return cls._api_call_lock
 
     @staticmethod
+    def _get_chunk_start(dt: datetime) -> datetime:
+        """Return the start of the 12h chunk (00:00 or 12:00) that dt falls in."""
+        hour = 12 if dt.time() >= time(12, 0) else 0
+        return dt.replace(hour=hour, minute=0, second=0, microsecond=0)
+
+    @staticmethod
+    def _get_chunks_for_datetime(from_local_datetime: datetime, local_today: date) -> list:
+        """Return list of chunk start datetimes needed to cover from_local_datetime to end of day.
+
+        Skips morning chunk for today-afternoon only (those flights have already departed).
+        """
+        from_date = from_local_datetime.date()
+        morning_start = datetime.combine(from_date, time(0, 0))
+        afternoon_start = datetime.combine(from_date, time(12, 0))
+        if from_date == local_today and from_local_datetime.time() >= time(12, 0):
+            return [afternoon_start]
+        return [morning_start, afternoon_start]
+
+    @staticmethod
+    async def _get_airport_tz(airport_code: str):
+        """Return pytz timezone for airport, falling back to UTC."""
+        async with db.get_connection() as conn:
+            timezone_str = await conn.fetchval(
+                "SELECT time_zone FROM airports WHERE code = $1", airport_code
+            )
+        if not timezone_str:
+            return pytz.UTC
+        try:
+            return pytz.timezone(timezone_str)
+        except Exception:
+            return pytz.UTC
+
+    @staticmethod
     async def find_cache_for_datetime(
         airport_code: str,
         from_local_datetime: datetime,
@@ -315,21 +348,7 @@ class FlightScheduleService:
         """
         debug_log(f"Fetching schedules for {airport_code} from {from_local_datetime} ({direction})")
 
-        # Get airport timezone from database
-        async with db.get_connection() as conn:
-            timezone_str = await conn.fetchval(
-                "SELECT time_zone FROM airports WHERE code = $1", airport_code
-            )
-
-        if not timezone_str:
-            logger.warning(f"No timezone found for {airport_code}, using UTC")
-            airport_tz = pytz.UTC
-        else:
-            try:
-                airport_tz = pytz.timezone(timezone_str)
-            except Exception:
-                logger.warning(f"Invalid timezone {timezone_str} for {airport_code}, using UTC")
-                airport_tz = pytz.UTC
+        airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
 
         # Determine from_time
         if from_local_datetime is not None:
@@ -420,14 +439,10 @@ class FlightScheduleService:
         lang: str = 'en'
     ) -> FlightsResponse:
         """
-        Get departing flights from airport starting from from_local_datetime.
+        Get departing flights from airport for the rest of the local day.
 
-        Args:
-            airport_code: IATA airport code
-            from_local_datetime: Start of time window (local airport time). If None, uses current time.
-            search_date: Fallback - if from_local_datetime not provided, uses midnight of this date.
-            limit: Max number of results (default 200 to get full 12h window)
-            force_refresh: Force refresh from API
+        Ensures cache for the relevant 12h chunk(s) (00:00-12:00 and/or 12:00-00:00)
+        then returns all flights from from_local_datetime to midnight.
         """
         direction = settings.default_flight_direction
 
@@ -438,31 +453,44 @@ class FlightScheduleService:
             else:
                 from_local_datetime = datetime.utcnow().replace(second=0, microsecond=0)
 
-        # Check for valid cache covering from_local_datetime
-        cache_info = None
-        if not force_refresh:
-            cache_info = await FlightScheduleService.find_cache_for_datetime(
-                airport_code, from_local_datetime, direction
-            )
+        # Get airport timezone and today's local date
+        airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
+        utc_now = datetime.now(pytz.UTC)
+        local_now = utc_now.astimezone(airport_tz)
+        local_today = local_now.date()
 
-        if not cache_info:
-            # Fetch new 12h window from API
-            success, last_fetched, fetch_to_local = await FlightScheduleService.fetch_and_cache_schedules(
-                airport_code, from_local_datetime, direction
-            )
-            if success:
-                cache_info = await FlightScheduleService.find_cache_for_datetime(
-                    airport_code, from_local_datetime, direction
+        from_date = from_local_datetime.date()
+        chunks_needed = FlightScheduleService._get_chunks_for_datetime(
+            from_local_datetime, local_today
+        )
+
+        # Ensure cache for each chunk; collect last_fetched_at in the same pass
+        last_fetched = None
+        for chunk_start in chunks_needed:
+            if force_refresh:
+                await FlightScheduleService.fetch_and_cache_schedules(
+                    airport_code, chunk_start, direction
                 )
+                info = await FlightScheduleService.find_cache_for_datetime(
+                    airport_code, chunk_start, direction
+                )
+            else:
+                info = await FlightScheduleService.find_cache_for_datetime(
+                    airport_code, chunk_start, direction
+                )
+                if not info:
+                    await FlightScheduleService.fetch_and_cache_schedules(
+                        airport_code, chunk_start, direction
+                    )
+                    info = await FlightScheduleService.find_cache_for_datetime(
+                        airport_code, chunk_start, direction
+                    )
+            if info and info['last_fetched_at']:
+                if last_fetched is None or info['last_fetched_at'] > last_fetched:
+                    last_fetched = info['last_fetched_at']
 
-        if not cache_info:
-            debug_log(f"No data available for {airport_code} from {from_local_datetime}")
-            return FlightsResponse(data=[], count=0, last_fetched_at=None, range_end_datetime=None)
+        end_of_day = datetime.combine(from_date + timedelta(days=1), time(0, 0))
 
-        fetch_to_local = cache_info['fetch_to_local']
-        last_fetched = cache_info['last_fetched_at']
-
-        # Query flights in the window
         lang = lang if lang in ('en', 'pl') else 'en'
         async with db.get_connection() as conn:
             rows = await conn.fetch(f"""
@@ -494,25 +522,24 @@ class FlightScheduleService:
                   AND f.scheduled_departure_local < $3
                 ORDER BY f.scheduled_departure_local ASC
                 LIMIT $4
-            """, airport_code, from_local_datetime, fetch_to_local, limit)
+            """, airport_code, from_local_datetime, end_of_day, limit)
 
-            # Get total count in window
             total_count = await conn.fetchval("""
                 SELECT COUNT(*)
                 FROM flights
                 WHERE origin_airport_code = $1
                   AND scheduled_departure_local >= $2
                   AND scheduled_departure_local < $3
-            """, airport_code, from_local_datetime, fetch_to_local)
+            """, airport_code, from_local_datetime, end_of_day)
 
-            flights = [Flight(**dict(row)) for row in rows]
+        flights = [Flight(**dict(row)) for row in rows]
 
-            return FlightsResponse(
-                data=flights,
-                count=total_count or 0,
-                last_fetched_at=last_fetched,
-                range_end_datetime=fetch_to_local.isoformat() if fetch_to_local else None
-            )
+        return FlightsResponse(
+            data=flights,
+            count=total_count or 0,
+            last_fetched_at=last_fetched,
+            range_end_datetime=end_of_day.isoformat()
+        )
 
 
 flight_schedule_service = FlightScheduleService()

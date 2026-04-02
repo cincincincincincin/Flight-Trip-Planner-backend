@@ -147,11 +147,6 @@ def init_db():
                     SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'city_code', elem->>'country_code', elem->>'time_zone', elem->'coordinates', elem->'urls'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
-                # ("planes.json", """
-                #     INSERT INTO planes (code, name)
-                #     SELECT elem->>'code', elem->>'name'
-                #     FROM jsonb_array_elements(%s::jsonb) AS elem;
-                # """)
             ]
             
             for filename, query in queries:
