@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Query, HTTPException, Path, Request
+from fastapi.responses import StreamingResponse
+import json
 from typing import Optional
 from datetime import date, datetime
 from src.services.flight_schedule_service import FlightScheduleService
@@ -12,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/flights", tags=["flights"])
 
-
-@router.get("/airport/{airport_code}", response_model=FlightsResponse)
+@router.get("/airport/{airport_code}")
 @limiter.limit(settings.rate_limit_flights)
 async def get_airport_flights(
     request: Request,
@@ -27,11 +28,7 @@ async def get_airport_flights(
 ):
     """
     Get departing flights from airport for the specified time range.
-
-    - When to_local_datetime is omitted, returns flights to end of airport's local day.
-    - When to_local_datetime is provided, supports cross-day ranges (e.g., for airports
-      in a different timezone than the display timezone).
-    - Returns range_end_datetime indicating the actual end of the fetched range.
+    Returns a stream of FlightsResponse objects (NDJSON).
     """
     try:
         try:
@@ -44,14 +41,22 @@ async def get_airport_flights(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid to_local_datetime: {to_local_datetime}")
 
-        return await FlightScheduleService.get_flights_from_airport(
-            airport_code=airport_code.upper(),
-            from_local_datetime=parsed_from_dt,
-            to_local_datetime=parsed_to_dt,
-            limit=limit,
-            force_refresh=force_refresh,
-            lang=lang,
-        )
+        async def response_generator():
+            try:
+                async for batch in FlightScheduleService.stream_flights_from_airport(
+                    airport_code=airport_code.upper(),
+                    from_local_datetime=parsed_from_dt,
+                    to_local_datetime=parsed_to_dt,
+                    limit=limit,
+                    force_refresh=force_refresh,
+                    lang=lang,
+                ):
+                    yield batch.json() + "\n"
+            except Exception as e:
+                logger.error(f"Stream error for {airport_code}: {str(e)}")
+                yield json.dumps({"success": False, "error": str(e)}) + "\n"
+
+        return StreamingResponse(response_generator(), media_type="application/x-ndjson")
     except HTTPException:
         raise
     except Exception as e:

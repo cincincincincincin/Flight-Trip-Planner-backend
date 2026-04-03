@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, AsyncGenerator
 from datetime import datetime, date, timedelta, time
 from src.database import db
 from src.models.flight import Flight, FlightsResponse, CacheInfo, AirportSchedulesCacheInfo
@@ -447,6 +447,126 @@ class FlightScheduleService:
         return True, datetime.now(), to_time
 
     @staticmethod
+    async def stream_flights_from_airport(
+        airport_code: str,
+        from_local_datetime: Optional[datetime] = None,
+        search_date: Optional[date] = None,
+        limit: int = 200,
+        force_refresh: bool = False,
+        lang: str = 'en',
+        to_local_datetime: Optional[datetime] = None,
+    ) -> AsyncGenerator[FlightsResponse, None]:
+        """
+        Yield departing flights from airport for each 12h chunk in the specified range.
+        This allows the frontend to receive and display data incrementally.
+        """
+        direction = settings.default_flight_direction
+
+        # Resolve from_local_datetime
+        if from_local_datetime is None:
+            if search_date is not None:
+                from_local_datetime = datetime.combine(search_date, time.min)
+            else:
+                from_local_datetime = datetime.utcnow().replace(second=0, microsecond=0)
+
+        # Get airport timezone and today's local date
+        airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
+        utc_now = datetime.now(pytz.UTC)
+        local_now = utc_now.astimezone(airport_tz)
+        local_today = local_now.date()
+
+        # Determine end of query range (fallback to end of airport's local day)
+        if to_local_datetime is not None:
+            end_of_query = to_local_datetime
+        else:
+            end_of_query = datetime.combine(from_local_datetime.date(), time.max)
+
+        chunks_needed = FlightScheduleService._get_chunks_for_range(
+            from_local_datetime, end_of_query, local_today
+        )
+
+        lang = lang if lang in ('en', 'pl') else 'en'
+        
+        for i, chunk_start in enumerate(chunks_needed):
+            # 1. Ensure cache for this specific chunk
+            chunk_end = chunk_start + timedelta(hours=12)
+            
+            if force_refresh:
+                await FlightScheduleService.fetch_and_cache_schedules(
+                    airport_code, chunk_start, direction
+                )
+                info = await FlightScheduleService.find_cache_for_datetime(
+                    airport_code, chunk_start, direction
+                )
+            else:
+                info = await FlightScheduleService.find_cache_for_datetime(
+                    airport_code, chunk_start, direction
+                )
+                if not info:
+                    await FlightScheduleService.fetch_and_cache_schedules(
+                        airport_code, chunk_start, direction
+                    )
+                    info = await FlightScheduleService.find_cache_for_datetime(
+                        airport_code, chunk_start, direction
+                    )
+            
+            # Use specific boundaries for this yield to prevent overlaps if multiple chunks are yielded
+            # from_local_datetime is used instead of chunk_start for the FIRST chunk to honor the request exactly.
+            # end_of_query is used instead of chunk_end for the LAST chunk.
+            query_start = from_local_datetime if i == 0 else chunk_start
+            query_end   = min(chunk_end, end_of_query)
+
+            # 2. Query database for just this chunk
+            async with db.get_connection() as conn:
+                rows = await conn.fetch(f"""
+                    SELECT
+                        f.id, f.flight_number, f.airline_code,
+                        f.origin_airport_code, f.destination_airport_code,
+                        f.scheduled_departure_utc, f.scheduled_departure_local,
+                        f.scheduled_arrival_utc, f.scheduled_arrival_local,
+                        f.revised_departure_utc, f.predicted_departure_utc, f.runway_departure_utc,
+                        f.revised_arrival_utc, f.predicted_arrival_utc, f.runway_arrival_utc,
+                        f.departure_terminal, f.departure_gate,
+                        f.arrival_terminal, f.arrival_gate,
+                        f.search_date, f.created_at,
+                        a1.name as airline_name,
+                        COALESCE(ap1.name_translations->>'{lang}', ap1.name) as origin_airport_name,
+                        COALESCE(ap2.name_translations->>'{lang}', ap2.name) as destination_airport_name,
+                        COALESCE(c1.name_translations->>'{lang}', c1.name) as origin_city_name,
+                        c1.code as origin_city_code,
+                        COALESCE(c2.name_translations->>'{lang}', c2.name) as destination_city_name,
+                        c2.code as destination_city_code
+                    FROM flights f
+                    LEFT JOIN airlines a1 ON f.airline_code = a1.code
+                    LEFT JOIN airports ap1 ON f.origin_airport_code = ap1.code
+                    LEFT JOIN airports ap2 ON f.destination_airport_code = ap2.code
+                    LEFT JOIN cities c1 ON ap1.city_code = c1.code
+                    LEFT JOIN cities c2 ON ap2.city_code = c2.code
+                    WHERE f.origin_airport_code = $1
+                      AND f.scheduled_departure_local >= $2
+                      AND f.scheduled_departure_local <= $3
+                    ORDER BY f.scheduled_departure_local ASC
+                    LIMIT $4
+                """, airport_code, query_start, query_end, limit)
+
+                total_count = await conn.fetchval("""
+                    SELECT COUNT(*)
+                    FROM flights
+                    WHERE origin_airport_code = $1
+                      AND scheduled_departure_local >= $2
+                      AND scheduled_departure_local <= $3
+                """, airport_code, query_start, query_end)
+
+            flights = [Flight(**dict(row)) for row in rows]
+            
+            yield FlightsResponse(
+                data=flights,
+                count=total_count or 0,
+                last_fetched_at=info['last_fetched_at'] if info else None,
+                range_end_datetime=query_end.isoformat()
+            )
+
+    @staticmethod
     async def get_flights_from_airport(
         airport_code: str,
         from_local_datetime: Optional[datetime] = None,
@@ -481,8 +601,10 @@ class FlightScheduleService:
         from_date = from_local_datetime.date()
 
         # Determine end of query range
-        # to_local_datetime is now required
-        end_of_query = to_local_datetime
+        if to_local_datetime is not None:
+            end_of_query = to_local_datetime
+        else:
+            end_of_query = datetime.combine(from_local_datetime.date(), time.max)
 
         chunks_needed = FlightScheduleService._get_chunks_for_range(
             from_local_datetime, end_of_query, local_today
