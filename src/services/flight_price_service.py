@@ -100,13 +100,22 @@ class FlightPriceService:
                 debug_log(f"Skipping offer: missing required data")
                 return None
 
-            # Parse departure time
+            # Parse departure time as TIMESTAMPTZ (UTC aware)
+            # fromisoformat handles "2026-05-20T17:30:00+02:00" correctly.
             departure_dt = datetime.fromisoformat(str(departure_at).replace('Z', '+00:00'))
 
             # Only include direct flights (transfers = 0)
             transfers = offer_data.get('transfers', 0)
             if transfers > 0:
                 return None
+
+            airline_code = offer_data.get('airline', '')
+            raw_fn = str(offer_data.get('flight_number', ''))
+            # Format as "AA 123" to match AeroDataBox/flights table format
+            if airline_code and raw_fn and not raw_fn.startswith(airline_code):
+                flight_number = f"{airline_code} {raw_fn}"
+            else:
+                flight_number = raw_fn
 
             return {
                 'origin_city_code': origin_city_code,
@@ -115,8 +124,8 @@ class FlightPriceService:
                 'destination_airport_code': destination_airport,
                 'price': float(price),
                 'currency': currency.upper(),
-                'airline_code': offer_data.get('airline'),
-                'flight_number': str(offer_data.get('flight_number', '')),
+                'airline_code': airline_code,
+                'flight_number': flight_number,
                 'departure_at': departure_dt,
                 'return_at': None,  # We only use one-way tickets
                 'transfers': transfers,
@@ -238,7 +247,7 @@ class FlightPriceService:
     async def get_offers_for_route(
         origin_airport_code: str,
         destination_airport_code: str,
-        departure_date: date,
+        departure_at: datetime,
         origin_city_code: Optional[str] = None,
         destination_city_code: Optional[str] = None,
         currency: str = settings.default_currency,
@@ -250,11 +259,12 @@ class FlightPriceService:
         Args:
             origin_airport_code: Origin airport IATA code
             destination_airport_code: Destination airport IATA code
-            departure_date: Date of departure
+            departure_at: Date and time of departure
             origin_city_code: Origin city code (if not provided, will be looked up)
             destination_city_code: Destination city code (if not provided, will be looked up)
             force_refresh: Force refresh from API
         """
+        departure_date = departure_at.date()
         # Get city codes if not provided
         if not origin_city_code or not destination_city_code:
             async with db.get_connection() as conn:
@@ -307,11 +317,13 @@ class FlightPriceService:
                 LEFT JOIN airports da ON fo.destination_airport_code = da.code
                 WHERE fo.origin_airport_code = $1
                   AND fo.destination_airport_code = $2
-                  AND DATE(fo.departure_at) = $3
+                  AND DATE(fo.departure_at AT TIME ZONE oa.time_zone) = $3
+                  AND EXTRACT(HOUR FROM fo.departure_at AT TIME ZONE oa.time_zone) = EXTRACT(HOUR FROM $5::TIMESTAMP)
+                  AND EXTRACT(MINUTE FROM fo.departure_at AT TIME ZONE oa.time_zone) = EXTRACT(MINUTE FROM $5::TIMESTAMP)
                   AND fo.transfers = 0
                   AND fo.currency = $4
                 ORDER BY fo.price ASC
-            """, origin_airport_code, destination_airport_code, departure_date, currency.upper())
+            """, origin_airport_code, destination_airport_code, departure_date, currency.upper(), departure_at)
 
             offers = [FlightOffer(**dict(row)) for row in rows]
 

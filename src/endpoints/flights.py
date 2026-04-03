@@ -70,7 +70,7 @@ async def get_flight_offers(
     request: Request,
     origin_airport: str = Path(..., description="Origin airport IATA code"),
     destination_airport: str = Path(..., description="Destination airport IATA code"),
-    departure_date: date = Query(default_factory=date.today, description="Departure date"),
+    departure_at: datetime = Query(..., description="Departure date and time with minute precision (ISO format)"),
     currency: str = Query(settings.default_currency, description="Currency code: PLN, USD, EUR, GBP"),
     force_refresh: bool = Query(False, description="Force refresh from API")
 ):
@@ -85,7 +85,7 @@ async def get_flight_offers(
         return await flight_price_service.get_offers_for_route(
             origin_airport_code=origin_airport.upper(),
             destination_airport_code=destination_airport.upper(),
-            departure_date=departure_date,
+            departure_at=departure_at,
             currency=currency.upper(),
             force_refresh=force_refresh
         )
