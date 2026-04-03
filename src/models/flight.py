@@ -86,7 +86,7 @@ class FlightsResponse(BaseModel):
     data: List[Flight]
     count: int
     last_fetched_at: Optional[datetime] = None
-    range_end_datetime: Optional[str] = None  # End of the fetched 12h window (ISO format)
+    range_end_datetime: Optional[str] = None  # End of the fetched range (ISO format)
 
 # ============================================
 # MODELS FOR FLIGHT OFFERS (Aviasales API)

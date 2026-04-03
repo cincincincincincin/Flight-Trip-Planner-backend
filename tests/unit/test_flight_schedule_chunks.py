@@ -33,41 +33,58 @@ class TestGetChunkStart:
         assert result.microsecond == 0
 
 
-class TestGetChunksForDatetime:
-    """Verify chunk selection logic — pure function, no DB needed."""
+class TestGetChunksForRange:
+    """Verify _get_chunks_for_range covers all needed 12h windows."""
 
-    def test_today_afternoon_returns_only_afternoon_chunk(self):
+    def test_morning_start_single_day(self):
+        """Morning from → two chunks covering whole day."""
+        from_dt = datetime(2024, 6, 15, 8, 0, 0)
+        to_dt = datetime(2024, 6, 16, 0, 0, 0)
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 14))
+        assert chunks == [datetime(2024, 6, 15, 0, 0, 0), datetime(2024, 6, 15, 12, 0, 0)]
+
+    def test_afternoon_start_single_day(self):
+        """Afternoon from → only afternoon chunk."""
+        from_dt = datetime(2024, 6, 15, 14, 0, 0)
+        to_dt = datetime(2024, 6, 16, 0, 0, 0)
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 14))
+        assert chunks == [datetime(2024, 6, 15, 12, 0, 0)]
+
+    def test_cross_day_evening_start(self):
+        """Evening from, to crosses midnight → afternoon chunk + next-day morning chunk."""
+        from_dt = datetime(2024, 6, 15, 22, 0, 0)
+        to_dt = datetime(2024, 6, 16, 2, 0, 0)
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 14))
+        assert chunks == [datetime(2024, 6, 15, 12, 0, 0), datetime(2024, 6, 16, 0, 0, 0)]
+
+    def test_today_afternoon_skips_morning_naturally(self):
+        """For today afternoon, morning chunk naturally not included."""
         from_dt = datetime(2024, 6, 15, 15, 30, 0)
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
+        to_dt = datetime(2024, 6, 16, 0, 0, 0)
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 15))
         assert chunks == [datetime(2024, 6, 15, 12, 0, 0)]
 
-    def test_today_morning_returns_both_chunks(self):
-        from_dt = datetime(2024, 6, 15, 8, 30, 0)
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
+    def test_today_morning_includes_both_chunks(self):
+        """For today morning, both chunks included."""
+        from_dt = datetime(2024, 6, 15, 8, 0, 0)
+        to_dt = datetime(2024, 6, 16, 0, 0, 0)
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 15))
         assert chunks == [datetime(2024, 6, 15, 0, 0, 0), datetime(2024, 6, 15, 12, 0, 0)]
 
-    def test_today_exactly_noon_returns_only_afternoon_chunk(self):
-        from_dt = datetime(2024, 6, 15, 12, 0, 0)
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
+    def test_to_dt_equals_chunk_boundary_not_included(self):
+        """to_dt exactly on chunk boundary → that chunk not included."""
+        from_dt = datetime(2024, 6, 15, 22, 0, 0)
+        to_dt = datetime(2024, 6, 16, 0, 0, 0)  # exactly midnight
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 14))
         assert chunks == [datetime(2024, 6, 15, 12, 0, 0)]
 
-    def test_future_date_afternoon_returns_both_chunks(self):
-        from_dt = datetime(2024, 6, 16, 14, 0, 0)  # tomorrow at 14:00
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
-        assert chunks == [datetime(2024, 6, 16, 0, 0, 0), datetime(2024, 6, 16, 12, 0, 0)]
-
-    def test_past_date_afternoon_returns_both_chunks(self):
-        from_dt = datetime(2024, 6, 14, 15, 0, 0)
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
-        assert chunks == [datetime(2024, 6, 14, 0, 0, 0), datetime(2024, 6, 14, 12, 0, 0)]
-
-    def test_today_midnight_returns_both_chunks(self):
-        from_dt = datetime(2024, 6, 15, 0, 0, 0)
-        today = date(2024, 6, 15)
-        chunks = FlightScheduleService._get_chunks_for_datetime(from_dt, today)
-        assert chunks == [datetime(2024, 6, 15, 0, 0, 0), datetime(2024, 6, 15, 12, 0, 0)]
+    def test_wide_range_three_chunks(self):
+        """Range spanning 26h → three chunks."""
+        from_dt = datetime(2024, 6, 15, 10, 0, 0)
+        to_dt = datetime(2024, 6, 16, 12, 0, 0)  # 26h range
+        chunks = FlightScheduleService._get_chunks_for_range(from_dt, to_dt, date(2024, 6, 14))
+        assert chunks == [
+            datetime(2024, 6, 15, 0, 0, 0),
+            datetime(2024, 6, 15, 12, 0, 0),
+            datetime(2024, 6, 16, 0, 0, 0),
+        ]

@@ -50,17 +50,23 @@ class FlightScheduleService:
         return dt.replace(hour=hour, minute=0, second=0, microsecond=0)
 
     @staticmethod
-    def _get_chunks_for_datetime(from_local_datetime: datetime, local_today: date) -> list:
-        """Return list of chunk start datetimes needed to cover from_local_datetime to end of day.
+    def _get_chunks_for_range(from_dt: datetime, to_dt: datetime, local_today: date) -> list:
+        """Return list of 12h chunk start datetimes needed to cover [from_dt, to_dt).
 
-        Skips morning chunk for today-afternoon only (those flights have already departed).
+        Starts from the chunk containing from_dt and advances in 12h steps until
+        the chunk start >= to_dt. The morning chunk for today-afternoon is skipped
+        naturally because _get_chunk_start(afternoon) already returns 12:00.
         """
-        from_date = from_local_datetime.date()
-        morning_start = datetime.combine(from_date, time(0, 0))
-        afternoon_start = datetime.combine(from_date, time(12, 0))
-        if from_date == local_today and from_local_datetime.time() >= time(12, 0):
-            return [afternoon_start]
-        return [morning_start, afternoon_start]
+        # local_today is retained for call-site symmetry with the previous helper and
+        # potential future use; morning-chunk skip for today-afternoon is implicit via
+        # _get_chunk_start (afternoon → returns 12:00, so the while loop starts there).
+        _ = local_today
+        chunks = []
+        current = FlightScheduleService._get_chunk_start(from_dt)
+        while current < to_dt:
+            chunks.append(current)
+            current += timedelta(hours=12)
+        return chunks
 
     @staticmethod
     async def _get_airport_tz(airport_code: str):
@@ -90,7 +96,7 @@ class FlightScheduleService:
                 WHERE airport_code = $1
                   AND direction = $2
                   AND fetch_from_local <= $3
-                  AND fetch_to_local > $3
+                  AND fetch_to_local >= $3
                   AND last_fetched_at > (NOW() - INTERVAL '{settings.flight_cache_expiry_hours} hour')
                 ORDER BY fetch_from_local DESC
                 LIMIT 1
@@ -359,8 +365,9 @@ class FlightScheduleService:
             local_now = utc_now.astimezone(airport_tz)
             from_time = local_now.replace(tzinfo=None)
 
-        # AeroDataBox allows max 12 hour range
-        to_time = from_time + timedelta(hours=settings.aerodatabox_window_hours)
+        # AeroDataBox allows max 12 hour range; subtract 1 minute so windows
+        # are [00:00, 11:59] and [12:00, 23:59] (minute precision, no boundary overlap).
+        to_time = from_time + timedelta(hours=settings.aerodatabox_window_hours) - timedelta(minutes=1)
 
         # search_date for flights table (date of from_time)
         search_date = from_time.date()
@@ -378,6 +385,16 @@ class FlightScheduleService:
                 sleep_time = FlightScheduleService.MIN_API_CALL_INTERVAL - time_since_last_call
                 debug_log(f"Rate limiting: sleeping for {sleep_time:.2f}s")
                 await asyncio.sleep(sleep_time)
+
+            # Double-checked locking: re-check cache here (inside the lock) before
+            # calling AeroDataBox. Multiple concurrent requests may all find no cache
+            # before the lock, but only the first one through should hit the API.
+            cached_again = await FlightScheduleService.find_cache_for_datetime(
+                airport_code, from_time, direction
+            )
+            if cached_again:
+                debug_log(f"Cache hit after lock for {airport_code} from {from_time} — skipping API call")
+                return True, cached_again['last_fetched_at'], None
 
             # Update last API call time before making the call
             FlightScheduleService._last_api_call_time = time_module.time()
@@ -436,13 +453,15 @@ class FlightScheduleService:
         search_date: Optional[date] = None,
         limit: int = 200,
         force_refresh: bool = False,
-        lang: str = 'en'
+        lang: str = 'en',
+        to_local_datetime: Optional[datetime] = None,
     ) -> FlightsResponse:
         """
-        Get departing flights from airport for the rest of the local day.
+        Get departing flights from airport for the specified range.
 
-        Ensures cache for the relevant 12h chunk(s) (00:00-12:00 and/or 12:00-00:00)
-        then returns all flights from from_local_datetime to midnight.
+        When to_local_datetime is None, returns flights to end of airport's local day.
+        When to_local_datetime is provided, returns flights to that datetime (supports
+        cross-day ranges for airports in different timezones from the display timezone).
         """
         direction = settings.default_flight_direction
 
@@ -460,8 +479,13 @@ class FlightScheduleService:
         local_today = local_now.date()
 
         from_date = from_local_datetime.date()
-        chunks_needed = FlightScheduleService._get_chunks_for_datetime(
-            from_local_datetime, local_today
+
+        # Determine end of query range
+        # to_local_datetime is now required
+        end_of_query = to_local_datetime
+
+        chunks_needed = FlightScheduleService._get_chunks_for_range(
+            from_local_datetime, end_of_query, local_today
         )
 
         # Ensure cache for each chunk; collect last_fetched_at in the same pass
@@ -488,8 +512,6 @@ class FlightScheduleService:
             if info and info['last_fetched_at']:
                 if last_fetched is None or info['last_fetched_at'] > last_fetched:
                     last_fetched = info['last_fetched_at']
-
-        end_of_day = datetime.combine(from_date + timedelta(days=1), time(0, 0))
 
         lang = lang if lang in ('en', 'pl') else 'en'
         async with db.get_connection() as conn:
@@ -519,18 +541,18 @@ class FlightScheduleService:
                 LEFT JOIN cities c2 ON ap2.city_code = c2.code
                 WHERE f.origin_airport_code = $1
                   AND f.scheduled_departure_local >= $2
-                  AND f.scheduled_departure_local < $3
+                  AND f.scheduled_departure_local <= $3
                 ORDER BY f.scheduled_departure_local ASC
                 LIMIT $4
-            """, airport_code, from_local_datetime, end_of_day, limit)
+            """, airport_code, from_local_datetime, end_of_query, limit)
 
             total_count = await conn.fetchval("""
                 SELECT COUNT(*)
                 FROM flights
                 WHERE origin_airport_code = $1
                   AND scheduled_departure_local >= $2
-                  AND scheduled_departure_local < $3
-            """, airport_code, from_local_datetime, end_of_day)
+                  AND scheduled_departure_local <= $3
+            """, airport_code, from_local_datetime, end_of_query)
 
         flights = [Flight(**dict(row)) for row in rows]
 
@@ -538,7 +560,7 @@ class FlightScheduleService:
             data=flights,
             count=total_count or 0,
             last_fetched_at=last_fetched,
-            range_end_datetime=end_of_day.isoformat()
+            range_end_datetime=end_of_query.isoformat()
         )
 
 

@@ -18,35 +18,39 @@ router = APIRouter(prefix="/flights", tags=["flights"])
 async def get_airport_flights(
     request: Request,
     airport_code: str = Path(..., description="IATA airport code (e.g., 'WAW')"),
-    from_local_datetime: Optional[str] = Query(None, description="Start of 12h window in local airport time (YYYY-MM-DDTHH:MM:SS). If omitted, uses current time."),
+    from_local_datetime: str = Query(..., description="Start of window in local airport time (YYYY-MM-DDTHH:MM:SS)."),
+    to_local_datetime: str = Query(..., description="End of window in local airport time (YYYY-MM-DDTHH:MM:SS)."),
     search_date: Optional[date] = Query(None, description="Fallback: date to search (uses midnight). Ignored if from_local_datetime is provided."),
-    limit: int = Query(200, ge=1, le=2000, description="Max results (default 200 for full 12h window)"),
+    limit: int = Query(200, ge=1, le=2000, description="Max results"),
     force_refresh: bool = Query(False, description="Force refresh from API"),
     lang: str = Query('en', description="Language for localized city/airport names (en/pl)")
 ):
     """
-    Get departing flights from airport for a 12h window starting at from_local_datetime.
+    Get departing flights from airport for the specified time range.
 
-    - Returns all flights in the 12h window (no offset pagination)
-    - Returns range_end_datetime for the next window request
-    - Automatically fetches from API if no valid cache covers the requested datetime
+    - When to_local_datetime is omitted, returns flights to end of airport's local day.
+    - When to_local_datetime is provided, supports cross-day ranges (e.g., for airports
+      in a different timezone than the display timezone).
+    - Returns range_end_datetime indicating the actual end of the fetched range.
     """
     try:
-        # Parse from_local_datetime string to datetime object
-        parsed_from_dt = None
-        if from_local_datetime:
-            try:
-                parsed_from_dt = datetime.fromisoformat(from_local_datetime)
-            except ValueError:
-                raise HTTPException(status_code=400, detail=f"Invalid from_local_datetime format: {from_local_datetime}. Use YYYY-MM-DDTHH:MM:SS")
+        try:
+            parsed_from_dt = datetime.fromisoformat(from_local_datetime)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid from_local_datetime: {from_local_datetime}")
+
+        try:
+            parsed_to_dt = datetime.fromisoformat(to_local_datetime)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid to_local_datetime: {to_local_datetime}")
 
         return await FlightScheduleService.get_flights_from_airport(
             airport_code=airport_code.upper(),
             from_local_datetime=parsed_from_dt,
-            search_date=search_date,
+            to_local_datetime=parsed_to_dt,
             limit=limit,
             force_refresh=force_refresh,
-            lang=lang
+            lang=lang,
         )
     except HTTPException:
         raise
