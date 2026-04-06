@@ -10,15 +10,12 @@ from src.config import settings
 from src.database import db
 from src.cache import cache
 from src.limiter import limiter
-from src.endpoints.airports import router as airports_router
-from src.endpoints.countries import router as countries_router
 from src.endpoints.flights import router as flights_router
 from src.endpoints.trips import router as trips_router
 from src.endpoints.preferences import router as preferences_router
-from src.endpoints.init import router as init_router
 import logging
 
-# Configure logging
+# Konfiguracja logowania
 logging.basicConfig(
     level=getattr(logging, settings.log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -30,10 +27,9 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Handle startup and shutdown events"""
+    # Obsługa startu i wyłączania serwera
     logger.info("Starting up...")
     try:
         await db.connect()
@@ -42,7 +38,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Database connection failed: {e}")
         raise
 
-    # Redis is optional – failure here does not prevent startup
+    # Redis jest opcjonalny błąd cache'u nie powinien blokować startu
     await cache.connect()
 
     yield
@@ -53,7 +49,7 @@ async def lifespan(app: FastAPI):
     logger.info("Database disconnected")
 
 
-# Create FastAPI app
+# Inicjalizacja FastAPI
 app = FastAPI(
     title=settings.app_name,
     description="API for flight trip planner app",
@@ -62,12 +58,12 @@ app = FastAPI(
     debug=settings.debug,
 )
 
-# --- Rate limiter ---
+# Rate limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
-# --- Exception handlers ---
+# Handlery wyjątków
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -95,7 +91,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     )
 
 
-# --- CORS ---
+# Middleware CORS (pozwalamy frontendowi na dostęp)
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,15 +101,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Routers ---
+# Endpointy API (Routery)
 
-app.include_router(airports_router)
-app.include_router(countries_router)
 app.include_router(flights_router)
 app.include_router(trips_router)
 app.include_router(preferences_router)
-app.include_router(init_router)
-
 
 @app.get("/")
 async def root():
@@ -122,11 +114,8 @@ async def root():
         "status": "running",
         "version": "1.0.0",
         "endpoints": {
-            "airports": "/airports/geojson",
-            "countries": "/countries/centers",
             "flights": "/flights",
             "trips": "/trips",
-            "init": "/init",
         },
     }
 

@@ -6,20 +6,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Debug flag - set to False to disable debug logging
+# Flaga debugowania: ustawienie na False wyłącza logi diagnostyczne zapytań API
 DEBUG_API_CALLS = settings.debug_api_calls
 
 def debug_log(message: str):
-    """Log debug message if DEBUG_API_CALLS is enabled"""
+    # Loguje komunikat diagnostyczny jeśli DEBUG_API_CALLS jest aktywny
     if DEBUG_API_CALLS:
         logger.debug(message)
 
 class AeroDataBoxClient:
-    """Client for AeroDataBox API (flight schedules)"""
+    # Klient niskopoziomowy dla API AeroDataBox obsługujący harmonogramy lotów
+    # Korzysta z platformy RapidAPI do autoryzacji i routingu zapytań
 
     BASE_URL = settings.aerodatabox_base_url
 
     def __init__(self):
+        # Inicjalizacja nagłówków autoryzacyjnych na podstawie ustawień systemowych
         self.api_key = settings.aerodatabox_api_key
         self.rapidapi_host = settings.rapidapi_host
         self.headers = {
@@ -40,20 +42,8 @@ class AeroDataBoxClient:
         with_leg: bool = True,
         with_private: bool = False
     ) -> Optional[Dict[str, Any]]:
-        """
-        Get departures/arrivals from airport by local time range
-
-        Args:
-            airport_code: IATA airport code (e.g., 'WAW')
-            from_local: Start time in format YYYY-MM-DDTHH:mm
-            to_local: End time in format YYYY-MM-DDTHH:mm (max 12 hours from start)
-            direction: 'Departure', 'Arrival', or 'Both'
-            with_cancelled: Include cancelled flights
-            with_cargo: Include cargo flights
-            with_codeshared: Include codeshared flights
-            with_leg: Include opposite leg information (departure/arrival details)
-            with_private: Include private flights
-        """
+        # Pobiera listę operacji lotniczych (odloty lub przyloty) dla zadanego okna czasowego (max 12h)
+        # Obsługuje precyzyjne filtrowanie lotów cargo, prywatnych oraz współdzielonych (codeshare)
         url = f"{self.BASE_URL}/flights/airports/iata/{airport_code}/{from_local}/{to_local}"
 
         params = {
@@ -71,8 +61,9 @@ class AeroDataBoxClient:
             async with httpx.AsyncClient(timeout=settings.aerodatabox_timeout) as client:
                 response = await client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
+                # Obsługa specyficznego kodu 204 oznaczającego brak lotów w danym oknie
                 if response.status_code == 204:
-                    debug_log(f"AeroDataBox API returned 204 No Content for {airport_code} ({from_local} – {to_local}): no flights in window")
+                    debug_log(f"AeroDataBox API returned 204 No Content for {airport_code}: no flights")
                     return {"departures": [], "arrivals": []}
                 data = response.json()
                 debug_log(f"AeroDataBox API response: {len(data.get('departures', []) + data.get('arrivals', []))} flights")
@@ -89,11 +80,13 @@ class AeroDataBoxClient:
 
 
 class AviasalesClient:
-    """Client for Aviasales/Travelpayouts API (flight prices)"""
+    # Klient integrujący API Travelpayouts/Aviasales w celu pobierania ofert cenowych
+    # Specjalizuje się w wyszukiwaniu najtańszych połączeń bezpośrednich między miastami
 
     BASE_URL = settings.aviasales_base_url
 
     def __init__(self):
+        # Inicjalizacja tokena autoryzacyjnego Partner Network
         self.api_token = settings.aviasales_api_token
 
     async def get_flight_prices(
@@ -107,19 +100,8 @@ class AviasalesClient:
         limit: int = 1000,
         sorting: str = "price"
     ) -> Optional[Dict[str, Any]]:
-        """
-        Get flight prices for origin-destination pair
-
-        Args:
-            origin: IATA city code (e.g., 'WAW')
-            destination: IATA city code (e.g., 'BCN')
-            departure_at: Departure date in format YYYY-MM or YYYY-MM-DD
-            currency: Currency code (default: USD)
-            one_way: True for one-way tickets, False for round-trip
-            direct: True for direct flights only
-            limit: Maximum number of results (max 1000)
-            sorting: 'price' or 'route'
-        """
+        # Pobiera asynchronicznie zestawienia cen biletów lotniczych dla wybranej trasy międzymiastowej
+        # Umożliwia precyzyjne określenie waluty, limitów wyników oraz rygoru lotów bezpośrednich
         params = {
             "origin": origin,
             "destination": destination,
@@ -157,6 +139,6 @@ class AviasalesClient:
             return None
 
 
-# Singleton instances
+# Globalne instancje (Singleton) klientów API wykorzystywane w serwisach biznesowych
 aerodatabox_client = AeroDataBoxClient()
 aviasales_client = AviasalesClient()

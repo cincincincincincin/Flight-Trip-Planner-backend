@@ -1,7 +1,8 @@
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, date, timedelta
 from src.database import db
-from src.models.flight import FlightOffer, FlightOffersResponse, CacheInfo, FlightPricesCacheInfo
+from src.models.flight import CacheInfo
+from src.models.offer import FlightOffer, FlightOffersResponse, FlightPricesCacheInfo
 from src.services.api_client import aviasales_client
 from src.config import settings
 import logging
@@ -9,19 +10,19 @@ import json
 
 logger = logging.getLogger(__name__)
 
-# Debug flag - set to False to disable debug logging
+# Flaga debugowania: ustawienie na False wyłącza logi diagnostyczne serwisu cen
 DEBUG_PRICE_SERVICE = settings.debug_price_service
 
 def debug_log(message: str):
-    """Log debug message if DEBUG_PRICE_SERVICE is enabled"""
+    # Loguje komunikat diagnostyczny jeśli DEBUG_PRICE_SERVICE jest aktywny
     if DEBUG_PRICE_SERVICE:
         logger.debug(message)
 
 
 class FlightPriceService:
-    """Service for managing flight prices from Aviasales API"""
+    # Serwis zarządzający ofertami cenowymi lotów pobieranymi z API Aviasales
 
-    # Cache expiry time in hours
+    # Czas wygasania pamięci podręcznej cen wyrażony w godzinach
     CACHE_EXPIRY_HOURS = settings.price_cache_expiry_hours
 
     @staticmethod
@@ -30,7 +31,7 @@ class FlightPriceService:
         destination_city_code: str,
         departure_date: date
     ) -> CacheInfo:
-        """Get cache information for flight prices"""
+        # Zwraca metadane dotyczące stanu pamięci podręcznej dla konkretnej trasy i daty
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at,
@@ -57,7 +58,7 @@ class FlightPriceService:
         departure_date: date,
         currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
-        """Check if cache exists and is still valid for the given currency"""
+        # Weryfikuje czy wpis w pamięci podręcznej istnieje i czy nie przekroczył czasu ważności
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at as last_fetched
@@ -88,9 +89,9 @@ class FlightPriceService:
         search_date: date,
         currency: str = settings.default_currency
     ) -> Optional[Dict[str, Any]]:
-        """Parse flight offer from Aviasales API response"""
+        # Przetwarza surową ofertę z API Aviasales na ustandaryzowany format wewnętrzny systemu
         try:
-            # Required fields
+            # Weryfikacja obecności kluczowych pól niezbędnych do poprawnej identyfikacji lotu
             origin_airport = offer_data.get('origin_airport')
             destination_airport = offer_data.get('destination_airport')
             price = offer_data.get('price')
@@ -100,18 +101,18 @@ class FlightPriceService:
                 debug_log(f"Skipping offer: missing required data")
                 return None
 
-            # Parse departure time as TIMESTAMPTZ (UTC aware)
-            # fromisoformat handles "2026-05-20T17:30:00+02:00" correctly.
+            # Konwersja czasu odlotu na obiekt świadomy strefy czasowej (UTC)
             departure_dt = datetime.fromisoformat(str(departure_at).replace('Z', '+00:00'))
 
-            # Only include direct flights (transfers = 0)
+            # Restrykcyjne filtrowanie: akceptujemy wyłącznie loty bezpośrednie bez przesiadek
             transfers = offer_data.get('transfers', 0)
             if transfers > 0:
                 return None
 
             airline_code = offer_data.get('airline', '')
             raw_fn = str(offer_data.get('flight_number', ''))
-            # Format as "AA 123" to match AeroDataBox/flights table format
+            
+            # Formatowanie numeru lotu do postaci ustandaryzowanej np. AA 123
             if airline_code and raw_fn and not raw_fn.startswith(airline_code):
                 flight_number = f"{airline_code} {raw_fn}"
             else:
@@ -127,12 +128,6 @@ class FlightPriceService:
                 'airline_code': airline_code,
                 'flight_number': flight_number,
                 'departure_at': departure_dt,
-                'return_at': None,  # We only use one-way tickets
-                'transfers': transfers,
-                'return_transfers': offer_data.get('return_transfers'),
-                'duration': offer_data.get('duration'),
-                'duration_to': offer_data.get('duration_to'),
-                'duration_back': offer_data.get('duration_back'),
                 'link': offer_data.get('link'),
                 'search_date': search_date
             }
@@ -142,11 +137,8 @@ class FlightPriceService:
 
     @staticmethod
     async def _save_offers_to_db(conn, offers_data: List[Dict[str, Any]]) -> int:
-        """Save parsed offers to database using the provided connection.
-
-        The caller is responsible for connection lifecycle and transaction management.
-        Raises on individual insert errors so the caller's transaction is rolled back.
-        """
+        # Zapisuje przetworzone oferty cenowe do bazy danych przy użyciu aktywnego połączenia
+        # Metoda realizuje operację upsert zapewniając aktualność linków i czasów trwania podróży
         saved_count = 0
         for offer_data in offers_data:
             try:
@@ -155,13 +147,10 @@ class FlightPriceService:
                         origin_city_code, destination_city_code,
                         origin_airport_code, destination_airport_code,
                         price, currency, airline_code, flight_number,
-                        departure_at, return_at, transfers, return_transfers,
-                        duration, duration_to, duration_back, link, search_date
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                        departure_at, link, search_date
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     ON CONFLICT (origin_airport_code, destination_airport_code, departure_at, flight_number, price)
                     DO UPDATE SET
-                        duration = EXCLUDED.duration,
-                        duration_to = EXCLUDED.duration_to,
                         link = EXCLUDED.link
                 """,
                     offer_data['origin_city_code'],
@@ -173,12 +162,6 @@ class FlightPriceService:
                     offer_data['airline_code'],
                     offer_data['flight_number'],
                     offer_data['departure_at'],
-                    offer_data['return_at'],
-                    offer_data['transfers'],
-                    offer_data['return_transfers'],
-                    offer_data['duration'],
-                    offer_data['duration_to'],
-                    offer_data['duration_back'],
                     offer_data['link'],
                     offer_data['search_date']
                 )
@@ -197,13 +180,13 @@ class FlightPriceService:
         departure_date: date,
         currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
-        """Fetch prices from API and cache them"""
+        # Pobiera aktualne ceny z API zewnętrznego i zapisuje je w pamięci podręcznej systemu
         debug_log(f"Fetching prices for {origin_city_code}->{destination_city_code} on {departure_date} in {currency}")
 
-        # Format date for API (YYYY-MM-DD)
+        # Formatowanie daty odlotu zgodnie z wymaganiami specyfikacji API
         departure_at = departure_date.strftime("%Y-%m-%d")
 
-        # Fetch from API
+        # Wykonanie zapytania do serwisu Aviasales/Travelpayouts
         api_response = await aviasales_client.get_flight_prices(
             origin=origin_city_code,
             destination=destination_city_code,
@@ -218,7 +201,7 @@ class FlightPriceService:
             logger.error(f"Failed to fetch prices from API for {origin_city_code}->{destination_city_code}")
             return False, None
 
-        # Parse offers before opening DB connection
+        # Przetworzenie otrzymanych ofert przed rozpoczęciem operacji na bazie danych
         offers_data = []
         for offer in api_response.get('data', []):
             parsed = FlightPriceService._parse_offer_from_api(
@@ -227,7 +210,7 @@ class FlightPriceService:
             if parsed:
                 offers_data.append(parsed)
 
-        # Save cache and offers atomically — if offers insert fails, cache is not marked fresh
+        # Atomowy zapis: aktualizacja metadanych cache oraz wstawienie nowych ofert w jednej transakcji
         async with db.get_connection() as conn:
             async with conn.transaction():
                 await conn.execute("""
@@ -253,19 +236,11 @@ class FlightPriceService:
         currency: str = settings.default_currency,
         force_refresh: bool = False
     ) -> FlightOffersResponse:
-        """
-        Get flight offers for a specific airport-to-airport route
-
-        Args:
-            origin_airport_code: Origin airport IATA code
-            destination_airport_code: Destination airport IATA code
-            departure_at: Date and time of departure
-            origin_city_code: Origin city code (if not provided, will be looked up)
-            destination_city_code: Destination city code (if not provided, will be looked up)
-            force_refresh: Force refresh from API
-        """
+        # Pobiera oferty cenowe dla konkretnej pary lotnisk i dokładnego czasu odlotu.
+        # Metoda dopasowuje oferty z uwzględnieniem stref czasowych i waluty.
         departure_date = departure_at.date()
-        # Get city codes if not provided
+        
+        # Pobranie brakujących kodów miast dla lotnisk jeśli nie zostały przekazane
         if not origin_city_code or not destination_city_code:
             async with db.get_connection() as conn:
                 if not origin_city_code:
@@ -281,12 +256,12 @@ class FlightPriceService:
             logger.error(f"Could not find city codes for airports {origin_airport_code}, {destination_airport_code}")
             return FlightOffersResponse(data=[], count=0)
 
-        # Check cache validity for this currency
+        # Sprawdzenie aktualności pamięci podręcznej dla wybranej waluty
         cache_valid, last_fetched = await FlightPriceService.is_cache_valid(
             origin_city_code, destination_city_code, departure_date, currency
         )
 
-        # Fetch from API if needed
+        # Odświeżenie danych z API w przypadku wymuszenia lub wygaśnięcia cache
         if force_refresh or not cache_valid:
             success, last_fetched = await FlightPriceService.fetch_and_cache_prices(
                 origin_city_code, destination_city_code, departure_date, currency
@@ -294,27 +269,19 @@ class FlightPriceService:
             if not success:
                 debug_log("API fetch failed, returning cached data if available")
 
-        # Get offers from database (filtered by specific airports and currency)
+        # Pobranie dopasowanych ofert z bazy z rygorystycznym sprawdzeniem czasu i parametrów lotu
         async with db.get_connection() as conn:
             rows = await conn.fetch("""
                 SELECT
                     fo.id, fo.origin_city_code, fo.destination_city_code,
                     fo.origin_airport_code, fo.destination_airport_code,
                     fo.price, fo.currency, fo.airline_code, fo.flight_number,
-                    fo.departure_at, fo.return_at, fo.transfers, fo.return_transfers,
-                    fo.duration, fo.duration_to, fo.duration_back, fo.link,
+                    fo.departure_at, fo.link,
                     fo.search_date, fo.created_at,
-                    a.name as airline_name,
-                    oc.name as origin_city_name,
-                    dc.name as destination_city_name,
-                    oa.name as origin_airport_name,
-                    da.name as destination_airport_name
+                    a.name as airline_name
                 FROM flight_offers fo
                 LEFT JOIN airlines a ON fo.airline_code = a.code
-                LEFT JOIN cities oc ON fo.origin_city_code = oc.code
-                LEFT JOIN cities dc ON fo.destination_city_code = dc.code
                 LEFT JOIN airports oa ON fo.origin_airport_code = oa.code
-                LEFT JOIN airports da ON fo.destination_airport_code = da.code
                 WHERE fo.origin_airport_code = $1
                   AND fo.destination_airport_code = $2
                   AND DATE(fo.departure_at AT TIME ZONE oa.time_zone) = $3
@@ -323,6 +290,7 @@ class FlightPriceService:
                   AND fo.transfers = 0
                   AND fo.currency = $4
                 ORDER BY fo.price ASC
+                LIMIT 1
             """, origin_airport_code, destination_airport_code, departure_date, currency.upper(), departure_at)
 
             offers = [FlightOffer(**dict(row)) for row in rows]
@@ -341,22 +309,12 @@ class FlightPriceService:
         currency: str = settings.default_currency,
         force_refresh: bool = False
     ) -> FlightOffersResponse:
-        """
-        Get all flight offers for a city-to-city pair (all airports in both cities)
-
-        Args:
-            origin_city_code: Origin city IATA code
-            destination_city_code: Destination city IATA code
-            departure_date: Date of departure
-            currency: Currency code
-            force_refresh: Force refresh from API
-        """
-        # Check cache validity for this currency
+        # Pobiera wszystkie dostępne oferty cenowe dla pary miast (wszystkie kombinacje lotnisk).
+        # Implementuje logikę sprawdzania cache i opcjonalnego pobierania danych z API.
         cache_valid, last_fetched = await FlightPriceService.is_cache_valid(
             origin_city_code, destination_city_code, departure_date, currency
         )
 
-        # Fetch from API if needed
         if force_refresh or not cache_valid:
             success, last_fetched = await FlightPriceService.fetch_and_cache_prices(
                 origin_city_code, destination_city_code, departure_date, currency
@@ -364,15 +322,14 @@ class FlightPriceService:
             if not success:
                 debug_log("API fetch failed, returning cached data if available")
 
-        # Get all offers for this city pair filtered by currency
+        # Zapytanie agregujące oferty dla całej aglomeracji miejskiej
         async with db.get_connection() as conn:
             rows = await conn.fetch("""
                 SELECT
                     fo.id, fo.origin_city_code, fo.destination_city_code,
                     fo.origin_airport_code, fo.destination_airport_code,
                     fo.price, fo.currency, fo.airline_code, fo.flight_number,
-                    fo.departure_at, fo.return_at, fo.transfers, fo.return_transfers,
-                    fo.duration, fo.duration_to, fo.duration_back, fo.link,
+                    fo.departure_at, fo.link,
                     fo.search_date, fo.created_at,
                     a.name as airline_name,
                     oc.name as origin_city_name,
@@ -402,4 +359,6 @@ class FlightPriceService:
             )
 
 
+# Globalna instancja serwisu zarządzania cenami
 flight_price_service = FlightPriceService()
+

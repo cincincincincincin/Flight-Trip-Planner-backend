@@ -12,54 +12,46 @@ import time as time_module
 
 logger = logging.getLogger(__name__)
 
-# Debug flag - set to False to disable debug logging
+# Flaga debugowania: ustawienie na False wyłącza logi diagnostyczne serwisu
 DEBUG_FLIGHT_SERVICE = settings.debug_flight_service
 
 def debug_log(message: str):
-    """Log debug message if DEBUG_FLIGHT_SERVICE is enabled"""
     if DEBUG_FLIGHT_SERVICE:
         logger.debug(message)
 
 
 class FlightScheduleService:
-    """Service for managing flight schedules from AeroDataBox API"""
+    # Serwis zarządzający harmonogramami lotów pobieranymi z zewnętrznego API AeroDataBox
 
-    # Cache expiry time in hours
+    # Czas wygasania pamięci podręcznej harmonogramów wyrażony w godzinach
     CACHE_EXPIRY_HOURS = settings.flight_cache_expiry_hours
 
-    # Rate limiting: minimum time between API calls (in seconds)
+    # Minimalny odstęp czasu między zapytaniami do API AeroDataBox (sekundy)
     MIN_API_CALL_INTERVAL = settings.aerodatabox_api_call_interval
 
-    # Track last API call time
+    # Znacznik czasu ostatniego pomyślnego zapytania
     _last_api_call_time = 0.0
 
-    # Lock to serialize API calls and prevent race conditions in rate limiting
+    # Blokada zapewniająca sekwencyjne wywołania API i zapobiegająca wyścigom
     _api_call_lock: Optional[asyncio.Lock] = None
 
     @classmethod
     def _get_lock(cls) -> asyncio.Lock:
-        """Get or create the API call lock (lazy initialization for asyncio loop)"""
+        # Zwraca lub inicjalizuje blokadę dostępu do zasobów API
         if cls._api_call_lock is None:
             cls._api_call_lock = asyncio.Lock()
         return cls._api_call_lock
 
     @staticmethod
     def _get_chunk_start(dt: datetime) -> datetime:
-        """Return the start of the 12h chunk (00:00 or 12:00) that dt falls in."""
+        # Wyznacza początek 12-godzinnego okna czasowego (00:00 lub 12:00) dla danej daty
         hour = 12 if dt.time() >= time(12, 0) else 0
         return dt.replace(hour=hour, minute=0, second=0, microsecond=0)
 
     @staticmethod
     def _get_chunks_for_range(from_dt: datetime, to_dt: datetime, local_today: date) -> list:
-        """Return list of 12h chunk start datetimes needed to cover [from_dt, to_dt).
-
-        Starts from the chunk containing from_dt and advances in 12h steps until
-        the chunk start >= to_dt. The morning chunk for today-afternoon is skipped
-        naturally because _get_chunk_start(afternoon) already returns 12:00.
-        """
-        # local_today is retained for call-site symmetry with the previous helper and
-        # potential future use; morning-chunk skip for today-afternoon is implicit via
-        # _get_chunk_start (afternoon → returns 12:00, so the while loop starts there).
+        # Generuje listę znaczników czasu dla 12-godzinnych paczek danych pokrywających zadany zakres
+        # Pętla iteruje od okna startowego do momentu osiągnięcia czasu końcowego
         _ = local_today
         chunks = []
         current = FlightScheduleService._get_chunk_start(from_dt)
@@ -70,7 +62,7 @@ class FlightScheduleService:
 
     @staticmethod
     async def _get_airport_tz(airport_code: str):
-        """Return pytz timezone for airport, falling back to UTC."""
+        # Pobiera strefę czasową lotniska z bazy danych, domyślnie zwraca UTC
         async with db.get_connection() as conn:
             timezone_str = await conn.fetchval(
                 "SELECT time_zone FROM airports WHERE code = $1", airport_code
@@ -88,7 +80,7 @@ class FlightScheduleService:
         from_local_datetime: datetime,
         direction: str = settings.default_flight_direction
     ) -> Optional[Dict]:
-        """Find a valid (non-expired) cache entry covering the given local datetime"""
+        # Wyszukuje ważny wpis w pamięci podręcznej dla konkretnego okna czasowego i lotniska
         async with db.get_connection() as conn:
             row = await conn.fetchrow(f"""
                 SELECT id, last_fetched_at, fetch_from_local, fetch_to_local
@@ -112,7 +104,7 @@ class FlightScheduleService:
         search_date: date,
         direction: str = settings.default_flight_direction
     ) -> CacheInfo:
-        """Get cache information for airport schedules (most recent window for the given date)"""
+        # Zwraca metadane dotyczące stanu pamięci podręcznej dla danego lotniska i dnia
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at, fetch_from_local, fetch_to_local
@@ -139,7 +131,7 @@ class FlightScheduleService:
         search_date: date,
         is_departure: bool
     ) -> Optional[Dict[str, Any]]:
-        """Parse flight data from AeroDataBox API response (withLeg=true format)"""
+        # Mapuje dane lotu z odpowiedzi AeroDataBox na ustandaryzowany słownik
         try:
             flight_number = flight_data.get('number')
             if not flight_number:
@@ -148,8 +140,10 @@ class FlightScheduleService:
 
             airline = flight_data.get('airline', {})
             airline_code = airline.get('iata')
+            airline_name = airline.get('name')
 
             def parse_time_dict(time_obj):
+                # Pomocnicza funkcja parsująca daty i czasy z formatu ISO na obiekty datetime
                 if not time_obj:
                     return None, None
                 utc_str = time_obj.get('utc')
@@ -170,14 +164,8 @@ class FlightScheduleService:
             arr_obj = flight_data.get('arrival', {})
 
             dep_sched_utc, dep_sched_local = parse_time_dict(dep_obj.get('scheduledTime'))
-            dep_revised_utc, _ = parse_time_dict(dep_obj.get('revisedTime'))
-            dep_predicted_utc, _ = parse_time_dict(dep_obj.get('predictedTime'))
-            dep_runway_utc, _ = parse_time_dict(dep_obj.get('runwayTime'))
 
             arr_sched_utc, arr_sched_local = parse_time_dict(arr_obj.get('scheduledTime'))
-            arr_revised_utc, _ = parse_time_dict(arr_obj.get('revisedTime'))
-            arr_predicted_utc, _ = parse_time_dict(arr_obj.get('predictedTime'))
-            arr_runway_utc, _ = parse_time_dict(arr_obj.get('runwayTime'))
 
             if is_departure:
                 arr_airport = arr_obj.get('airport', {})
@@ -190,23 +178,16 @@ class FlightScheduleService:
                 return {
                     'flight_number': flight_number,
                     'airline_code': airline_code,
+                    'airline_name': airline_name,
                     'destination_airport_code': dest_airport_code,
                     'scheduled_departure_utc': dep_sched_utc,
                     'scheduled_departure_local': dep_sched_local,
                     'scheduled_arrival_utc': arr_sched_utc,
                     'scheduled_arrival_local': arr_sched_local,
-                    'revised_departure_utc': dep_revised_utc,
-                    'predicted_departure_utc': dep_predicted_utc,
-                    'runway_departure_utc': dep_runway_utc,
-                    'revised_arrival_utc': arr_revised_utc,
-                    'predicted_arrival_utc': arr_predicted_utc,
-                    'runway_arrival_utc': arr_runway_utc,
+                    
                     'departure_terminal': dep_obj.get('terminal'),
                     'departure_gate': dep_obj.get('gate'),
-                    'arrival_terminal': arr_obj.get('terminal'),
-                    'arrival_gate': arr_obj.get('gate'),
-                    'search_date': search_date,
-                    'raw_data': flight_data
+                    'search_date': search_date
                 }
             else:
                 dep_airport = dep_obj.get('airport', {})
@@ -219,23 +200,16 @@ class FlightScheduleService:
                 return {
                     'flight_number': flight_number,
                     'airline_code': airline_code,
+                    'airline_name': airline_name,
                     'origin_airport_code': origin_airport_code,
                     'scheduled_departure_utc': dep_sched_utc,
                     'scheduled_departure_local': dep_sched_local,
                     'scheduled_arrival_utc': arr_sched_utc,
                     'scheduled_arrival_local': arr_sched_local,
-                    'revised_departure_utc': dep_revised_utc,
-                    'predicted_departure_utc': dep_predicted_utc,
-                    'runway_departure_utc': dep_runway_utc,
-                    'revised_arrival_utc': arr_revised_utc,
-                    'predicted_arrival_utc': arr_predicted_utc,
-                    'runway_arrival_utc': arr_runway_utc,
+                    
                     'departure_terminal': dep_obj.get('terminal'),
                     'departure_gate': dep_obj.get('gate'),
-                    'arrival_terminal': arr_obj.get('terminal'),
-                    'arrival_gate': arr_obj.get('gate'),
-                    'search_date': search_date,
-                    'raw_data': flight_data
+                    'search_date': search_date
                 }
         except Exception as e:
             logger.error(f"Error parsing flight: {str(e)}")
@@ -243,17 +217,13 @@ class FlightScheduleService:
 
     @staticmethod
     async def _save_flights_to_db(conn, flights_data: List[Dict[str, Any]]) -> int:
-        """Save parsed flights to database using the provided connection.
-
-        The caller is responsible for connection lifecycle and transaction management.
-        Raises on individual insert errors so the caller's transaction is rolled back.
-        """
+        # Zapisuje sparsowane loty do bazy danych przy użyciu aktywnego połączenia
+        # Metoda realizuje operację upsert oraz walidację kluczy obcych (lotniska, linie)
         saved_count = 0
         skipped_count = 0
         for flight_data in flights_data:
             try:
-                # Validate that all required foreign keys exist in database
-                # Check origin airport (if not None)
+                # Weryfikacja istnienia lotnisk i linii lotniczych przed próbą zapisu
                 if flight_data.get('origin_airport_code'):
                     origin_exists = await conn.fetchval(
                         "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
@@ -264,7 +234,6 @@ class FlightScheduleService:
                         skipped_count += 1
                         continue
 
-                # Check destination airport (if not None)
                 if flight_data.get('destination_airport_code'):
                     dest_exists = await conn.fetchval(
                         "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
@@ -275,42 +244,27 @@ class FlightScheduleService:
                         skipped_count += 1
                         continue
 
-                # Check airline (if not None)
-                if flight_data.get('airline_code'):
-                    airline_exists = await conn.fetchval(
-                        "SELECT EXISTS(SELECT 1 FROM airlines WHERE code = $1)",
-                        flight_data['airline_code']
-                    )
-                    if not airline_exists:
-                        debug_log(f"Skipping flight {flight_data.get('flight_number')}: airline {flight_data['airline_code']} not in database")
-                        skipped_count += 1
-                        continue
+                if flight_data.get('airline_code') and flight_data.get('airline_name'):
+                    # Mechanizm JIT: Automatyczne dodawanie nieznanej linii do bazy danych
+                    await conn.execute("""
+                        INSERT INTO airlines (code, name)
+                        VALUES ($1, $2)
+                        ON CONFLICT (code) DO NOTHING
+                    """, flight_data['airline_code'], flight_data['airline_name'])
 
-                # All foreign keys validated, proceed with insert
+                # Wykonanie zapytania INSERT z klauzulą ON CONFLICT dla aktualizacji istniejących rekordów
                 await conn.execute("""
                     INSERT INTO flights (
                         flight_number, airline_code, origin_airport_code, destination_airport_code,
                         scheduled_departure_utc, scheduled_departure_local,
                         scheduled_arrival_utc, scheduled_arrival_local,
-                        revised_departure_utc, predicted_departure_utc, runway_departure_utc,
-                        revised_arrival_utc, predicted_arrival_utc, runway_arrival_utc,
-                        departure_terminal, departure_gate, arrival_terminal, arrival_gate,
-                        search_date, raw_data
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                        departure_terminal, departure_gate,
+                        search_date ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     ON CONFLICT (flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
                     DO UPDATE SET
                         scheduled_arrival_utc = EXCLUDED.scheduled_arrival_utc,
                         scheduled_arrival_local = EXCLUDED.scheduled_arrival_local,
-                        revised_departure_utc = EXCLUDED.revised_departure_utc,
-                        predicted_departure_utc = EXCLUDED.predicted_departure_utc,
-                        runway_departure_utc = EXCLUDED.runway_departure_utc,
-                        revised_arrival_utc = EXCLUDED.revised_arrival_utc,
-                        predicted_arrival_utc = EXCLUDED.predicted_arrival_utc,
-                        runway_arrival_utc = EXCLUDED.runway_arrival_utc,
-                        departure_gate = EXCLUDED.departure_gate,
-                        arrival_terminal = EXCLUDED.arrival_terminal,
-                        arrival_gate = EXCLUDED.arrival_gate,
-                        raw_data = EXCLUDED.raw_data
+                        departure_gate = EXCLUDED.departure_gate
                 """,
                     flight_data['flight_number'],
                     flight_data['airline_code'],
@@ -320,18 +274,9 @@ class FlightScheduleService:
                     flight_data['scheduled_departure_local'],
                     flight_data['scheduled_arrival_utc'],
                     flight_data['scheduled_arrival_local'],
-                    flight_data['revised_departure_utc'],
-                    flight_data['predicted_departure_utc'],
-                    flight_data['runway_departure_utc'],
-                    flight_data['revised_arrival_utc'],
-                    flight_data['predicted_arrival_utc'],
-                    flight_data['runway_arrival_utc'],
                     flight_data['departure_terminal'],
                     flight_data['departure_gate'],
-                    flight_data['arrival_terminal'],
-                    flight_data['arrival_gate'],
-                    flight_data['search_date'],
-                    json.dumps(flight_data['raw_data'])
+                    flight_data['search_date']
                 )
                 saved_count += 1
             except Exception as e:
@@ -347,48 +292,39 @@ class FlightScheduleService:
         from_local_datetime: Optional[datetime] = None,
         direction: str = settings.default_flight_direction
     ) -> Tuple[bool, Optional[datetime], Optional[datetime]]:
-        """
-        Fetch schedules from API for a 12h window starting at from_local_datetime.
-
-        Returns: (success, last_fetched_at, fetch_to_local)
-        """
+        # Pobiera harmonogramy z API dla 12-godzinnego okna czasowego i zapisuje je w cache.
+        # Metoda orkiestruje cały proces: od sprawdzenia blokad API po atomowy zapis w DB.
         debug_log(f"Fetching schedules for {airport_code} from {from_local_datetime} ({direction})")
 
         airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
 
-        # Determine from_time
+        # Wyznaczenie punktu startowego zapytania (bieżący czas na lotnisku lub zadany parametr)
         if from_local_datetime is not None:
             from_time = from_local_datetime
         else:
-            # Use current time at airport
             utc_now = datetime.now(pytz.UTC)
             local_now = utc_now.astimezone(airport_tz)
             from_time = local_now.replace(tzinfo=None)
 
-        # AeroDataBox allows max 12 hour range; subtract 1 minute so windows
-        # are [00:00, 11:59] and [12:00, 23:59] (minute precision, no boundary overlap).
+        # Określenie zakresu czasowego (AeroDataBox obsługuje maksymalnie 12 godzin)
         to_time = from_time + timedelta(hours=settings.aerodatabox_window_hours) - timedelta(minutes=1)
-
-        # search_date for flights table (date of from_time)
         search_date = from_time.date()
 
-        # Format times for API (local time without timezone)
         from_local_str = from_time.strftime("%Y-%m-%dT%H:%M")
         to_local_str = to_time.strftime("%Y-%m-%dT%H:%M")
 
-        # Acquire lock to serialize API calls and prevent concurrent rate limit bypass
+        # Synchronizacja wywołań API przy użyciu blokady asynchronicznej
         lock = FlightScheduleService._get_lock()
         async with lock:
-            # Rate limiting: ensure at least MIN_API_CALL_INTERVAL seconds between API calls
+            # Kontrola częstotliwości zapytań (Rate Limiting na poziomie serwisu)
             time_since_last_call = time_module.time() - FlightScheduleService._last_api_call_time
             if time_since_last_call < FlightScheduleService.MIN_API_CALL_INTERVAL:
                 sleep_time = FlightScheduleService.MIN_API_CALL_INTERVAL - time_since_last_call
                 debug_log(f"Rate limiting: sleeping for {sleep_time:.2f}s")
                 await asyncio.sleep(sleep_time)
 
-            # Double-checked locking: re-check cache here (inside the lock) before
-            # calling AeroDataBox. Multiple concurrent requests may all find no cache
-            # before the lock, but only the first one through should hit the API.
+            # Podwójne sprawdzenie cache (Double-Checked Locking): upewnienie się że inny proces
+            # nie uzupełnił danych w trakcie oczekiwania na blokadę.
             cached_again = await FlightScheduleService.find_cache_for_datetime(
                 airport_code, from_time, direction
             )
@@ -396,10 +332,9 @@ class FlightScheduleService:
                 debug_log(f"Cache hit after lock for {airport_code} from {from_time} — skipping API call")
                 return True, cached_again['last_fetched_at'], None
 
-            # Update last API call time before making the call
+            # Aktualizacja znacznika czasu przed wywołaniem API RapidAPI/AeroDataBox
             FlightScheduleService._last_api_call_time = time_module.time()
 
-            # Fetch from API (inside lock to enforce rate limit)
             api_response = await aerodatabox_client.get_airport_departures(
                 airport_code=airport_code,
                 from_local=from_local_str,
@@ -412,7 +347,7 @@ class FlightScheduleService:
             logger.error(f"Failed to fetch schedules from API for {airport_code}")
             return False, None, None
 
-        # Parse flights before opening DB connection
+        # Przetworzenie otrzymanych danych przed otwarciem transakcji bazy danych
         flights_data = []
         departures = api_response.get('departures', [])
         arrivals = api_response.get('arrivals', [])
@@ -429,7 +364,7 @@ class FlightScheduleService:
                 parsed['destination_airport_code'] = airport_code
                 flights_data.append(parsed)
 
-        # Save cache entry and flights atomically — if flights insert fails, cache is not marked fresh
+        # Atomowy zapis: aktualizacja wpisu w cache oraz wstawienie lotów w jednej transakcji
         async with db.get_connection() as conn:
             async with conn.transaction():
                 await conn.execute("""
@@ -453,42 +388,37 @@ class FlightScheduleService:
         search_date: Optional[date] = None,
         limit: int = 200,
         force_refresh: bool = False,
-        lang: str = 'en',
         to_local_datetime: Optional[datetime] = None,
     ) -> AsyncGenerator[FlightsResponse, None]:
-        """
-        Yield departing flights from airport for each 12h chunk in the specified range.
-        This allows the frontend to receive and display data incrementally.
-        """
+        # Generator asynchroniczny zwracający loty z danego lotniska w formie przyrostowej (paczki 12h).
+        # Umożliwia frontendowi płynne wyświetlanie danych bez oczekiwania na pełny wynik zapytania.
         direction = settings.default_flight_direction
 
-        # Resolve from_local_datetime
+        # Wyznaczenie punktu startowego na podstawie daty wyszukiwania lub czasu UTC
         if from_local_datetime is None:
             if search_date is not None:
                 from_local_datetime = datetime.combine(search_date, time.min)
             else:
                 from_local_datetime = datetime.utcnow().replace(second=0, microsecond=0)
 
-        # Get airport timezone and today's local date
+        # Pobranie strefy czasowej lotniska dla poprawnej kalkulacji lokalnego czasu operacyjnego
         airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
         utc_now = datetime.now(pytz.UTC)
         local_now = utc_now.astimezone(airport_tz)
         local_today = local_now.date()
 
-        # Determine end of query range (fallback to end of airport's local day)
+        # Określenie momentu zakończenia zapytania (domyślnie koniec bieżącego dnia lokalnego)
         if to_local_datetime is not None:
             end_of_query = to_local_datetime
         else:
             end_of_query = datetime.combine(from_local_datetime.date(), time.max)
 
+        # Podział zakresu na 12-godzinne okna czasowe obsługiwane przez API
         chunks_needed = FlightScheduleService._get_chunks_for_range(
             from_local_datetime, end_of_query, local_today
         )
-
-        lang = lang if lang in ('en', 'pl') else 'en'
-        
         for i, chunk_start in enumerate(chunks_needed):
-            # 1. Ensure cache for this specific chunk
+            # Przetwarzanie każdej 12-godzinnej paczki danych z osobna
             chunk_end = chunk_start + timedelta(hours=12)
             
             if force_refresh:
@@ -510,31 +440,22 @@ class FlightScheduleService:
                         airport_code, chunk_start, direction
                     )
             
-            # Use specific boundaries for this yield to prevent overlaps if multiple chunks are yielded
-            # from_local_datetime is used instead of chunk_start for the FIRST chunk to honor the request exactly.
-            # end_of_query is used instead of chunk_end for the LAST chunk.
+            # Precyzyjne dopasowanie granic zapytania SQL dla danego wywołania generatora
             query_start = from_local_datetime if i == 0 else chunk_start
             query_end   = min(chunk_end, end_of_query)
 
-            # 2. Query database for just this chunk
+            # Pobranie danych z bazy dla aktualnie przetwarzanego okna czasowego
             async with db.get_connection() as conn:
-                rows = await conn.fetch(f"""
+                rows = await conn.fetch("""
                     SELECT
                         f.id, f.flight_number, f.airline_code,
                         f.origin_airport_code, f.destination_airport_code,
                         f.scheduled_departure_utc, f.scheduled_departure_local,
                         f.scheduled_arrival_utc, f.scheduled_arrival_local,
-                        f.revised_departure_utc, f.predicted_departure_utc, f.runway_departure_utc,
-                        f.revised_arrival_utc, f.predicted_arrival_utc, f.runway_arrival_utc,
                         f.departure_terminal, f.departure_gate,
-                        f.arrival_terminal, f.arrival_gate,
                         f.search_date, f.created_at,
                         a1.name as airline_name,
-                        COALESCE(ap1.name_translations->>'{lang}', ap1.name) as origin_airport_name,
-                        COALESCE(ap2.name_translations->>'{lang}', ap2.name) as destination_airport_name,
-                        COALESCE(c1.name_translations->>'{lang}', c1.name) as origin_city_name,
                         c1.code as origin_city_code,
-                        COALESCE(c2.name_translations->>'{lang}', c2.name) as destination_city_name,
                         c2.code as destination_city_code
                     FROM flights f
                     LEFT JOIN airlines a1 ON f.airline_code = a1.code
@@ -559,6 +480,7 @@ class FlightScheduleService:
 
             flights = [Flight(**dict(row)) for row in rows]
             
+            # Przekazanie przetworzonej paczki danych do odbiorcy strumienia
             yield FlightsResponse(
                 data=flights,
                 count=total_count or 0,
@@ -573,26 +495,18 @@ class FlightScheduleService:
         search_date: Optional[date] = None,
         limit: int = 200,
         force_refresh: bool = False,
-        lang: str = 'en',
         to_local_datetime: Optional[datetime] = None,
     ) -> FlightsResponse:
-        """
-        Get departing flights from airport for the specified range.
-
-        When to_local_datetime is None, returns flights to end of airport's local day.
-        When to_local_datetime is provided, returns flights to that datetime (supports
-        cross-day ranges for airports in different timezones from the display timezone).
-        """
+        # Pobiera pełną listę lotów w zadanym zakresie czasowym (metoda blokująca).
+        # Agreguje wyniki z wielu potencjalnych okien czasowych w jedną odpowiedź.
         direction = settings.default_flight_direction
 
-        # Resolve from_local_datetime
         if from_local_datetime is None:
             if search_date is not None:
                 from_local_datetime = datetime.combine(search_date, time.min)
             else:
                 from_local_datetime = datetime.utcnow().replace(second=0, microsecond=0)
 
-        # Get airport timezone and today's local date
         airport_tz = await FlightScheduleService._get_airport_tz(airport_code)
         utc_now = datetime.now(pytz.UTC)
         local_now = utc_now.astimezone(airport_tz)
@@ -600,7 +514,6 @@ class FlightScheduleService:
 
         from_date = from_local_datetime.date()
 
-        # Determine end of query range
         if to_local_datetime is not None:
             end_of_query = to_local_datetime
         else:
@@ -610,7 +523,7 @@ class FlightScheduleService:
             from_local_datetime, end_of_query, local_today
         )
 
-        # Ensure cache for each chunk; collect last_fetched_at in the same pass
+        # Zapewnienie aktualności danych w cache dla każdego wymaganego okna
         last_fetched = None
         for chunk_start in chunks_needed:
             if force_refresh:
@@ -635,25 +548,17 @@ class FlightScheduleService:
                 if last_fetched is None or info['last_fetched_at'] > last_fetched:
                     last_fetched = info['last_fetched_at']
 
-        lang = lang if lang in ('en', 'pl') else 'en'
         async with db.get_connection() as conn:
-            rows = await conn.fetch(f"""
+            rows = await conn.fetch("""
                 SELECT
                     f.id, f.flight_number, f.airline_code,
                     f.origin_airport_code, f.destination_airport_code,
                     f.scheduled_departure_utc, f.scheduled_departure_local,
                     f.scheduled_arrival_utc, f.scheduled_arrival_local,
-                    f.revised_departure_utc, f.predicted_departure_utc, f.runway_departure_utc,
-                    f.revised_arrival_utc, f.predicted_arrival_utc, f.runway_arrival_utc,
                     f.departure_terminal, f.departure_gate,
-                    f.arrival_terminal, f.arrival_gate,
                     f.search_date, f.created_at,
                     a1.name as airline_name,
-                    COALESCE(ap1.name_translations->>'{lang}', ap1.name) as origin_airport_name,
-                    COALESCE(ap2.name_translations->>'{lang}', ap2.name) as destination_airport_name,
-                    COALESCE(c1.name_translations->>'{lang}', c1.name) as origin_city_name,
                     c1.code as origin_city_code,
-                    COALESCE(c2.name_translations->>'{lang}', c2.name) as destination_city_name,
                     c2.code as destination_city_code
                 FROM flights f
                 LEFT JOIN airlines a1 ON f.airline_code = a1.code
@@ -686,4 +591,6 @@ class FlightScheduleService:
         )
 
 
+# Globalna instancja serwisu harmonogramów lotów
 flight_schedule_service = FlightScheduleService()
+

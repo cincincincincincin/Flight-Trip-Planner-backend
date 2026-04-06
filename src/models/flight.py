@@ -1,181 +1,86 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
-
-# ============================================
-# MODELS FOR FLIGHTS (AeroDataBox API)
-# ============================================
+from src.models.offer import FlightOffer
 
 class FlightTime(BaseModel):
-    """Flight time information (UTC and local)"""
-    utc: Optional[datetime] = None
-    local: Optional[datetime] = None
-
-class AirportInfo(BaseModel):
-    """Airport information from API"""
-    icao: Optional[str] = None
-    iata: Optional[str] = None
-    name: Optional[str] = None
-    shortName: Optional[str] = None
-    municipalityName: Optional[str] = None
-    location: Optional[Dict[str, float]] = None
-    countryCode: Optional[str] = None
-    timeZone: Optional[str] = None
-
-class FlightMovement(BaseModel):
-    """Flight movement information (departure or arrival)"""
-    airport: Optional[AirportInfo] = None
-    scheduledTime: Optional[FlightTime] = None
-    revisedTime: Optional[FlightTime] = None
-    predictedTime: Optional[FlightTime] = None
-    runwayTime: Optional[FlightTime] = None
-    terminal: Optional[str] = None
-    checkInDesk: Optional[str] = None
-    gate: Optional[str] = None
-    baggageBelt: Optional[str] = None
-    runway: Optional[str] = None
+    # Szczegółowe informacje o czasie operacji lotniczej
+    # Przechowuje zarówno czas uniwersalny (UTC), jak i czas lokalny dla lotniska
+    
+    utc: Optional[datetime] = Field(default=None, description="Time in UTC standard")
+    local: Optional[datetime] = Field(default=None, description="Time in the airport's local timezone")
 
 class FlightBase(BaseModel):
-    """Base flight model"""
-    flight_number: str
-    airline_code: Optional[str] = None
-    origin_airport_code: str
-    destination_airport_code: str
-    scheduled_departure_utc: datetime
-    scheduled_departure_local: Optional[datetime] = None
-    scheduled_arrival_utc: Optional[datetime] = None
-    scheduled_arrival_local: Optional[datetime] = None
-    departure_terminal: Optional[str] = None
-    departure_gate: Optional[str] = None
-    arrival_terminal: Optional[str] = None
-    arrival_gate: Optional[str] = None
+    # Podstawowy model lotu używany w harmonogramach
+    # Definiuje trasę, numer lotu oraz kluczowe momenty podróży
+    
+    flight_number: str = Field(..., description="Unique flight identifier")
+    airline_code: Optional[str] = Field(default=None, description="IATA code of the airline operating the flight")
+    origin_airport_code: str = Field(..., description="Departure airport IATA code")
+    destination_airport_code: str = Field(..., description="Arrival airport IATA code")
+    scheduled_departure_utc: datetime = Field(..., description="UTC departure time")
+    scheduled_departure_local: Optional[datetime] = Field(default=None, description="Local departure time")
+    scheduled_arrival_utc: Optional[datetime] = Field(default=None, description="UTC arrival time")
+    scheduled_arrival_local: Optional[datetime] = Field(default=None, description="Local arrival time")
+    departure_terminal: Optional[str] = Field(default=None, description="Departure terminal info")
+    departure_gate: Optional[str] = Field(default=None, description="Departure gate info")
 
 class Flight(FlightBase):
-    """Flight with full details"""
-    id: Optional[int] = None
-    revised_departure_utc: Optional[datetime] = None
-    predicted_departure_utc: Optional[datetime] = None
-    runway_departure_utc: Optional[datetime] = None
-    revised_arrival_utc: Optional[datetime] = None
-    predicted_arrival_utc: Optional[datetime] = None
-    runway_arrival_utc: Optional[datetime] = None
-    search_date: Optional[date] = None
-    raw_data: Optional[Dict[str, Any]] = None
-    created_at: Optional[datetime] = None
+    # Pełny model lotu wzbogacony o dane geograficzne i systemowe
+    # Wykorzystywany do wyświetlania kart lotów w interfejsie użytkownika
+    
+    id: Optional[int] = Field(default=None, description="Internal system database ID")
+    search_date: Optional[date] = Field(default=None, description="Date when this flight was searched for")
+    created_at: Optional[datetime] = Field(default=None, description="Timestamp of record creation")
 
-    # Extended info
-    origin_airport_name: Optional[str] = None
-    destination_airport_name: Optional[str] = None
-    origin_city_name: Optional[str] = None
-    destination_city_name: Optional[str] = None
-    origin_city_code: Optional[str] = None
-    destination_city_code: Optional[str] = None
-    airline_name: Optional[str] = None
+    # Dane o nazwach miast, państw i przewoźników pobierane z bazy danych
+    origin_city_code: Optional[str] = Field(default=None, description="IATA code of the departure city")
+    destination_city_code: Optional[str] = Field(default=None, description="IATA code of the arrival city")
+    airline_name: Optional[str] = Field(default=None, description="Full name of the airline")
 
-    class Config:
-        from_attributes = True
+    # from_attributes=True pozwala modelowi na tworzenie nowych obiektów bezpośrednio na podstawie
+    # atrybutów bazy danych lub innych klas, zamiast tylko ze standardowych słowników Pythona.
+    model_config = ConfigDict(from_attributes=True)
 
 class FlightResponse(BaseModel):
-    """Response for single flight"""
-    success: bool = True
-    data: Flight
+    # Standardowy kontener odpowiedzi API dla pojedynczego obiektu lotu
+    success: bool = Field(default=True, description="Operation success status")
+    data: Flight = Field(..., description="Detailed flight schedule data")
 
 class FlightsResponse(BaseModel):
-    """Response for multiple flights"""
-    success: bool = True
-    data: List[Flight]
-    count: int
-    last_fetched_at: Optional[datetime] = None
-    range_end_datetime: Optional[str] = None  # End of the fetched range (ISO format)
-
-# ============================================
-# MODELS FOR FLIGHT OFFERS (Aviasales API)
-# ============================================
-
-class FlightOfferBase(BaseModel):
-    """Base flight offer model"""
-    origin_city_code: str
-    destination_city_code: str
-    origin_airport_code: str
-    destination_airport_code: str
-    price: float
-    currency: str
-    airline_code: Optional[str] = None
-    flight_number: Optional[str] = None
-    departure_at: datetime
-    transfers: int = 0
-    duration_to: Optional[int] = None  # Duration in minutes
-    link: Optional[str] = None
-
-class FlightOffer(FlightOfferBase):
-    """Flight offer with full details"""
-    id: Optional[int] = None
-    return_at: Optional[datetime] = None
-    return_transfers: Optional[int] = None
-    duration: Optional[int] = None
-    duration_back: Optional[int] = None
-    search_date: Optional[date] = None
-    created_at: Optional[datetime] = None
-
-    # Extended info
-    origin_city_name: Optional[str] = None
-    destination_city_name: Optional[str] = None
-    origin_airport_name: Optional[str] = None
-    destination_airport_name: Optional[str] = None
-    airline_name: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
-class FlightOfferResponse(BaseModel):
-    """Response for single flight offer"""
-    success: bool = True
-    data: FlightOffer
-
-class FlightOffersResponse(BaseModel):
-    """Response for multiple flight offers"""
-    success: bool = True
-    data: List[FlightOffer]
-    count: int
-    last_fetched_at: Optional[datetime] = None
-
-# ============================================
-# COMBINED RESPONSE (Flight + Offer)
-# ============================================
+    # Kontener odpowiedzi API dla listy lotów wraz z informacją o stanie synchronizacji
+    success: bool = Field(default=True, description="Operation success status")
+    data: List[Flight] = Field(..., description="List of individual flight schedules")
+    count: int = Field(..., description="Total number of flight records")
+    last_fetched_at: Optional[datetime] = Field(default=None, description="Last data synchronization timestamp")
+    range_end_datetime: Optional[str] = Field(default=None, description="ISO timestamp for the end of the fetched time window")
 
 class FlightWithOffer(BaseModel):
-    """Flight combined with price offer (if available)"""
-    flight: Flight
-    offer: Optional[FlightOffer] = None
+    # Zintegrowany model łączący harmonogram lotu z opcjonalną wyceną
+    # Kluczowy obiekt przesyłany do frontendu w celu pokazania lotu wraz z aktualną ceną
+    
+    flight: Flight = Field(..., description="Detailed flight schedule data")
+    offer: Optional[FlightOffer] = Field(default=None, description="Linked pricing offer details")
 
 class FlightsWithOffersResponse(BaseModel):
-    """Response for flights with their offers"""
-    success: bool = True
-    data: List[FlightWithOffer]
-    count: int
-    schedules_last_fetched_at: Optional[datetime] = None
-    prices_last_fetched_at: Optional[datetime] = None
-
-# ============================================
-# CACHE INFO
-# ============================================
+    # Zbiorcza odpowiedź API zawierająca loty wraz z ich ofertami cenowymi
+    success: bool = Field(default=True, description="Operation success status")
+    data: List[FlightWithOffer] = Field(..., description="List of flights paired with their offers")
+    count: int = Field(..., description="Total record count")
+    schedules_last_fetched_at: Optional[datetime] = Field(default=None, description="Schedules synchronization timestamp")
+    prices_last_fetched_at: Optional[datetime] = Field(default=None, description="Prices synchronization timestamp")
 
 class CacheInfo(BaseModel):
-    """Information about cached data"""
-    has_cache: bool
-    last_fetched_at: Optional[datetime] = None
-    records_count: Optional[int] = None
+    # Uniwersalna struktura opisująca stan pamięci podręcznej dla dowolnego typu danych
+    
+    has_cache: bool = Field(..., description="Indicates if valid cache exists")
+    last_fetched_at: Optional[datetime] = Field(default=None, description="Last cache update timestamp")
+    records_count: Optional[int] = Field(default=None, description="Number of stored records")
 
 class AirportSchedulesCacheInfo(BaseModel):
-    """Cache info for airport schedules"""
-    airport_code: str
-    search_date: date
-    direction: str
-    cache_info: CacheInfo
-
-class FlightPricesCacheInfo(BaseModel):
-    """Cache info for flight prices"""
-    origin_city_code: str
-    destination_city_code: str
-    departure_date: date
-    cache_info: CacheInfo
+    # Szczegółowe metadane cache'owania dla harmonogramów konkretnego lotniska
+    
+    airport_code: str = Field(..., description="3-letter IATA airport code")
+    search_date: date = Field(..., description="Date of the scheduled operations")
+    direction: str = Field(..., description="Flight flow direction (Departure/Arrival)")
+    cache_info: CacheInfo = Field(..., description="General cache status details")

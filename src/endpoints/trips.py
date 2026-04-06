@@ -1,22 +1,21 @@
-"""
-User trip persistence endpoints.
-All routes require a valid Supabase JWT (Bearer token).
-"""
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Path
 from src.auth import get_current_user
 from src.database import db
 from src.models.trip import SaveTripRequest, TripResponse
-import logging
 
 logger = logging.getLogger(__name__)
+
+# Endpointy do zarządzania zapisanymi podróżami użytkownika
+# Wszystkie trasy wymagają poprawnego tokena JWT (Bearer token) z systemu Supabase
 
 router = APIRouter(prefix="/trips", tags=["trips"])
 
 
 @router.get("", response_model=list[TripResponse])
 async def list_trips(user: dict = Depends(get_current_user)):
-    """List all saved trips for the authenticated user."""
+    # Pobiera listę wszystkich zapisanych podróży użytkownika
     user_id: str = user["sub"]
     async with db.get_connection() as conn:
         rows = await conn.fetch(
@@ -44,7 +43,7 @@ async def list_trips(user: dict = Depends(get_current_user)):
 
 @router.post("", response_model=TripResponse, status_code=201)
 async def save_trip(body: SaveTripRequest, user: dict = Depends(get_current_user)):
-    """Save a new trip for the authenticated user."""
+    # Zapisuje nową podróż użytkownika
     user_id: str = user["sub"]
     async with db.get_connection() as conn:
         row = await conn.fetchrow(
@@ -76,7 +75,7 @@ async def update_trip(
     trip_id: int = Path(...),
     user: dict = Depends(get_current_user),
 ):
-    """Update an existing trip. Only the owner can update."""
+    # Aktualizuje istniejącą podróż użytkownika
     user_id: str = user["sub"]
     async with db.get_connection() as conn:
         row = await conn.fetchrow(
@@ -110,7 +109,7 @@ async def delete_trip(
     trip_id: int = Path(...),
     user: dict = Depends(get_current_user),
 ):
-    """Delete a trip. Only the owner can delete."""
+    # Usuwa podróż użytkownika
     user_id: str = user["sub"]
     async with db.get_connection() as conn:
         result = await conn.execute(

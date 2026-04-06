@@ -1,15 +1,13 @@
 import json
 import logging
 from typing import Any, Optional, Callable, Awaitable
-
 import redis.asyncio as aioredis
 from pydantic import BaseModel
-
 from src.config import settings
 
-
+# Klasa pomocnicza która rozszerza standardowy koder JSON o obsługę modeli Pydantic
+# Pozwala to na automatyczną zamianę obiektów danych na tekst który może być zapisany w Redisie
 class _PydanticEncoder(json.JSONEncoder):
-    """JSON encoder that serializes Pydantic models to dicts."""
     def default(self, o: Any) -> Any:
         if isinstance(o, BaseModel):
             return o.model_dump()
@@ -17,18 +15,15 @@ class _PydanticEncoder(json.JSONEncoder):
 
 logger = logging.getLogger(__name__)
 
-
+# System pamięci podręcznej wykorzystujący bazę Redis która przechowuje dane w pamięci RAM
+# Zastosowany wzorzec Cache-Aside polega na tym że aplikacja najpierw sprawdza cache
+# a dopiero gdy tam nie ma danych to odpytuje bazę postgres i uzupełnia brakujący wpis
 class RedisCache:
-    """
-    Async Redis cache with graceful degradation.
-    If Redis is unavailable all operations are no-ops and callers fall back to DB.
-    """
-
     def __init__(self):
         self._client: Optional[aioredis.Redis] = None
 
     async def connect(self):
-        """Create Redis connection pool. Called from lifespan startup (non-fatal)."""
+        # Inicjalizacja połączenia oraz sprawdzenie dostępności serwera Redis
         try:
             self._client = aioredis.from_url(
                 settings.redis_url,
@@ -37,20 +32,20 @@ class RedisCache:
                 socket_connect_timeout=settings.redis_connect_timeout,
                 socket_timeout=settings.redis_socket_timeout,
             )
-            await self._client.ping()  # type: ignore[misc]
+            await self._client.ping()
             logger.info("Redis connected successfully")
         except Exception as e:
             logger.warning(f"Redis unavailable (cache disabled): {e}")
             self._client = None
 
     async def disconnect(self):
-        """Close Redis connection. Called from lifespan shutdown."""
+        # Zamykanie aktywnej sesji podczas kończenia pracy przez serwer
         if self._client:
             await self._client.aclose()
             logger.info("Redis disconnected")
 
     async def get(self, key: str) -> Optional[Any]:
-        """Return cached value or None on miss/error."""
+        # Pobieranie danych dla konkretnego klucza lub None w przypadku braku danych lub błędu
         if not self._client:
             return None
         try:
@@ -61,7 +56,7 @@ class RedisCache:
             return None
 
     async def set(self, key: str, value: Any, ttl: int) -> None:
-        """Store value with TTL in seconds. Silently ignores errors."""
+        # Zapis danych w cache z określonym czasem ważności TTL
         if not self._client:
             return
         try:
@@ -70,24 +65,16 @@ class RedisCache:
             logger.warning(f"Redis SET error for '{key}': {e}")
 
     async def cached(self, key: str, ttl: int, fn: Callable[[], Awaitable[Any]]) -> Any:
-        """
-        Cache-aside helper. Returns cached value or calls fn(), stores result.
-
-        Usage:
-            result = await cache.cached(
-                key="geojson:airports:False:None",
-                ttl=86400,
-                fn=lambda: airport_service.get_airports_as_geojson(),
-            )
-        """
+        # Funkcja, która automatycznie sprawdza cache i pobiera dane jeśli ich brakuje
         hit = await self.get(key)
         if hit is not None:
             logger.debug(f"Cache HIT: {key}")
             return hit
+        
         logger.debug(f"Cache MISS: {key}")
         result = await fn()
         await self.set(key, result, ttl)
         return result
 
-
+# Jeden wspólny obiekt obsługujący pamięć podręczną w całym projekcie
 cache = RedisCache()

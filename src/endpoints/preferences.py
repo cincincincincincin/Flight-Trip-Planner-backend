@@ -1,7 +1,3 @@
-"""
-Endpoint preferencji użytkownika.
-Wymaga ważnego tokenu Supabase JWT (Bearer).
-"""
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,12 +7,15 @@ from src.models.preference import PreferencesPayload, PreferencesResponse
 
 logger = logging.getLogger(__name__)
 
+# Endpointy obsługujące preferencje użytkownika
+# Dostęp wymaga dostarczenia poprawnego tokenu Supabase JWT (Bearer)
+
 router = APIRouter(prefix="/preferences", tags=["preferences"])
 
 
 @router.get("", response_model=PreferencesResponse)
 async def get_preferences(user: dict = Depends(get_current_user)):
-    """Pobierz zapisane preferencje dla zalogowanego użytkownika."""
+    # Pobiera aktualne ustawienia i preferencje użytkownika
     user_id: str = user["sub"]
     async with db.get_connection() as conn:
         row = await conn.fetchrow(
@@ -31,7 +30,7 @@ async def get_preferences(user: dict = Depends(get_current_user)):
 
 @router.put("", response_model=PreferencesResponse)
 async def save_preferences(body: PreferencesPayload, user: dict = Depends(get_current_user)):
-    """Zapisz (upsert) preferencje dla zalogowanego użytkownika."""
+    # Zapisuje lub aktualizuje preferencje użytkownika
     user_id: str = user["sub"]
     data_json = body.data.model_dump()
     async with db.get_connection() as conn:

@@ -1,66 +1,35 @@
--- 1. Usunięcie starych tabel
+-- Usunięcie starych tabel
 DROP TABLE IF EXISTS flight_offers, flight_prices_cache, flights, airport_schedules_cache CASCADE;
-DROP TABLE IF EXISTS airlines, airports, cities, countries CASCADE;
--- DROP TABLE IF EXISTS airlines, airports, cities, countries, planes CASCADE;
+DROP TABLE IF EXISTS airlines, airports, cities CASCADE;
 
--- 1.1 Kraje (z countries.json)
-CREATE TABLE countries (
-    code VARCHAR(2) PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    name_translations JSONB,
-    currency VARCHAR(3),
-    wikipedia_link TEXT,
-    center_lon DOUBLE PRECISION,
-    center_lat DOUBLE PRECISION,
-    center_zoom FLOAT
-    -- cases JSONB
-);
-
--- 1.2 Miasta (z cities.json)
+-- Miasta z cities.json
 CREATE TABLE cities (
     code VARCHAR(10) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    name_translations JSONB,
+    name_translations JSONB, -- Wykorzystywane przez backend do generowania wielojęzycznych GeoJSON
     country_code VARCHAR(2),
-    time_zone VARCHAR(50),
-    coordinates JSONB
-    -- cases JSONB
+    coordinates JSONB -- Może będzie używane w przyszłości
 );
 
--- 1.3 Linie lotnicze (z airlines.json)
+-- Linie lotnicze z airlines.json
 CREATE TABLE airlines (
     code VARCHAR(3) PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    name_translations JSONB,
-    is_lowcost BOOLEAN DEFAULT FALSE
+    name VARCHAR(200) NOT NULL
 );
 
--- 1.4 Lotniska (z airports.json)
+-- Lotniska z airports.json
 CREATE TABLE airports (
     code VARCHAR(4) PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
-    name_translations JSONB,
+    name_translations JSONB, -- Wykorzystywane przez backend do generowania wielojęzycznych GeoJSON
     city_code VARCHAR(10),
     country_code VARCHAR(2),
     time_zone VARCHAR(50),
     coordinates JSONB,
-    urls JSONB
+    urls JSONB -- Może w przyszłości będę pokazywał informacje o lotniskach
 );
 
--- 1.5 Samoloty (z planes.json)
--- CREATE TABLE planes (
---     code VARCHAR(10) PRIMARY KEY,
---     name VARCHAR(100) NOT NULL
--- );
-
-      
-
--- ============================================
--- 1.7 TABELE DLA ZEWNĘTRZNYCH API
--- ============================================
-
--- Cache dla schedules z AeroDataBox API (airport departures/arrivals)
--- Każdy rekord reprezentuje jedno 12h okno czasowe
+-- Cache dla schedules z AeroDataBox API
 CREATE TABLE airport_schedules_cache (
     id SERIAL PRIMARY KEY,
     airport_code VARCHAR(4) NOT NULL,
@@ -83,18 +52,10 @@ CREATE TABLE flights (
     scheduled_departure_local TIMESTAMP,
     scheduled_arrival_utc TIMESTAMP WITH TIME ZONE,
     scheduled_arrival_local TIMESTAMP,
-    revised_departure_utc TIMESTAMP WITH TIME ZONE,
-    predicted_departure_utc TIMESTAMP WITH TIME ZONE,
-    runway_departure_utc TIMESTAMP WITH TIME ZONE,
-    revised_arrival_utc TIMESTAMP WITH TIME ZONE,
-    predicted_arrival_utc TIMESTAMP WITH TIME ZONE,
-    runway_arrival_utc TIMESTAMP WITH TIME ZONE,
     departure_terminal VARCHAR(10),
     departure_gate VARCHAR(10),
-    arrival_terminal VARCHAR(10),
-    arrival_gate VARCHAR(10),
+    arrival_gate VARCHAR(10),     -- Może w przyszłości
     search_date DATE NOT NULL,
-    raw_data JSONB,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE(flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
 );
@@ -122,35 +83,28 @@ CREATE TABLE flight_offers (
     airline_code VARCHAR(3),
     flight_number VARCHAR(20),
     departure_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    return_at TIMESTAMP WITH TIME ZONE,
-    transfers INTEGER DEFAULT 0,
-    return_transfers INTEGER DEFAULT 0,
-    duration INTEGER,
-    duration_to INTEGER,
-    duration_back INTEGER,
+    transfers INTEGER DEFAULT 0, -- Może w przyszłości
+    duration_to INTEGER,         -- Może w przyszłości
     link TEXT,
     search_date DATE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE(origin_airport_code, destination_airport_code, departure_at, flight_number, price)
 );
 
+-- Plany podróży użytkownika
 CREATE TABLE IF NOT EXISTS user_trips (
     id          SERIAL PRIMARY KEY,
-    user_id     TEXT NOT NULL,              -- Supabase user UUID (JWT "sub" claim)
-    name        TEXT,                       -- optional label, e.g. "Summer 2026"
-    trip_state  JSONB NOT NULL,             -- serialized TripState
-    trip_routes JSONB NOT NULL DEFAULT '[]',
+    user_id     TEXT NOT NULL, -- Identyfikator UUID użytkownika pochodzący z pola sub w tokenie JWT
+    name        TEXT, -- Opcjonalna nazwa etykiety podróży przypisana przez użytkownika
+    trip_state  JSONB NOT NULL, -- Obiekt zawierający lotnisko startowe oraz listę wszystkich odcinków podróży wraz z wybranymi połączeniami
+    trip_routes JSONB NOT NULL DEFAULT '[]', -- Współrzędne geograficzne punktów trasy wykorzystywane do natychmiastowego rysowania linii na mapie
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_trips_user_id ON user_trips (user_id);
-CREATE INDEX IF NOT EXISTS idx_user_trips_updated  ON user_trips (updated_at DESC);
-
--- Preferencje użytkownika (język, styl mapy, kolory, rozmiary)
+-- Preferencje użytkownika język, styl mapy, kolory, rozmiary
 CREATE TABLE IF NOT EXISTS user_preferences (
     user_id    TEXT PRIMARY KEY,
     data       JSONB NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-

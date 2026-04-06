@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Query, HTTPException, Path, Request
-from fastapi.responses import StreamingResponse
 import json
+import logging
 from typing import Optional
 from datetime import date, datetime
-from src.services.flight_schedule_service import FlightScheduleService
+from fastapi import APIRouter, Query, HTTPException, Path, Request
+from fastapi.responses import StreamingResponse
+from src.services.flight_schedule_service import flight_schedule_service
 from src.services.flight_price_service import flight_price_service
 from src.limiter import limiter
-from src.models.flight import FlightsResponse, FlightOffersResponse
+from src.models.flight import FlightsResponse
+from src.models.offer import FlightOffersResponse
 from src.config import settings
-import logging
 
 logger = logging.getLogger(__name__)
 
+# Definicja routera dla operacji na lotach
 router = APIRouter(prefix="/flights", tags=["flights"])
 
 @router.get("/airport/{airport_code}")
@@ -23,13 +25,10 @@ async def get_airport_flights(
     to_local_datetime: str = Query(..., description="End of window in local airport time (YYYY-MM-DDTHH:MM:SS)."),
     search_date: Optional[date] = Query(None, description="Fallback: date to search (uses midnight). Ignored if from_local_datetime is provided."),
     limit: int = Query(200, ge=1, le=2000, description="Max results"),
-    force_refresh: bool = Query(False, description="Force refresh from API"),
-    lang: str = Query('en', description="Language for localized city/airport names (en/pl)")
+    force_refresh: bool = Query(False, description="Force refresh from API")
 ):
-    """
-    Get departing flights from airport for the specified time range.
-    Returns a stream of FlightsResponse objects (NDJSON).
-    """
+    # Zwraca strumień lotów odlatujących z danego lotniska dla określonego przedziału czasowego.
+    # Wyniki są przesyłane w formacie NDJSON dla zapewnienia płynności renderowania na frontendzie.
     try:
         try:
             parsed_from_dt = datetime.fromisoformat(from_local_datetime)
@@ -42,14 +41,14 @@ async def get_airport_flights(
             raise HTTPException(status_code=400, detail=f"Invalid to_local_datetime: {to_local_datetime}")
 
         async def response_generator():
+            # Generator asynchroniczny przetwarzający paczki danych z serwisu harmonogramów
             try:
-                async for batch in FlightScheduleService.stream_flights_from_airport(
+                async for batch in flight_schedule_service.stream_flights_from_airport(
                     airport_code=airport_code.upper(),
                     from_local_datetime=parsed_from_dt,
                     to_local_datetime=parsed_to_dt,
                     limit=limit,
                     force_refresh=force_refresh,
-                    lang=lang,
                 ):
                     yield batch.json() + "\n"
             except Exception as e:
@@ -74,13 +73,7 @@ async def get_flight_offers(
     currency: str = Query(settings.default_currency, description="Currency code: PLN, USD, EUR, GBP"),
     force_refresh: bool = Query(False, description="Force refresh from API")
 ):
-    """
-    Get flight offers (prices) for a specific airport-to-airport route
-
-    - Fetches prices from Aviasales API
-    - Returns only direct flights (no transfers)
-    - Filters results for specific airports (important for cities with multiple airports)
-    """
+    # Zwraca oferty cenowe lotów dla konkretnej trasy między lotniskami.
     try:
         return await flight_price_service.get_offers_for_route(
             origin_airport_code=origin_airport.upper(),
@@ -92,5 +85,3 @@ async def get_flight_offers(
     except Exception as e:
         logger.error(f"Error getting offers for {origin_airport}->{destination_airport}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-

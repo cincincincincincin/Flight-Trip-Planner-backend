@@ -1,14 +1,6 @@
-"""
-Supabase JWT authentication dependency.
-
-Verifies JWTs using:
-1. HS256 with SUPABASE_JWT_SECRET (legacy, primary)
-2. RS256 via JWKS endpoint as fallback (if supabase_url is configured)
-"""
 import logging
 import time
 from typing import Optional
-
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,7 +9,11 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# In-memory JWKS cache (TTL: 1 hour)
+# Integracja z systemem Supabase służąca do weryfikacji tożsamości użytkowników przy pomocy podpisanych tokenów JWT
+# System obsługuje dwa sposoby sprawdzania podpisu czyli algorytm symetryczny HS256
+# oraz asymetryczny RS256 pobierający klucze publiczne z adresu JWKS
+
+# Podręczna kopia kluczy publicznych która jest ważna przez godzinę w celu ograniczenia liczby zapytań
 _jwks_cache: Optional[dict] = None
 _jwks_fetched_at: float = 0.0
 JWKS_TTL_SECONDS = settings.supabase_jwks_ttl
@@ -26,7 +22,8 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def _get_jwks() -> Optional[dict]:
-    """Fetch and cache Supabase JWKS. Returns None if unavailable."""
+    # Pobieranie i zapisywanie kluczy publicznych Supabase potrzebnych do weryfikacji asymetrycznej
+    # Zwraca None w przypadku braku adresu URL serwera auth
     global _jwks_cache, _jwks_fetched_at
 
     if not settings.supabase_url:
@@ -53,16 +50,10 @@ async def _get_jwks() -> Optional[dict]:
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> dict:
-    """
-    FastAPI dependency. Validates Supabase Bearer token and returns the JWT payload.
-    Tries HS256 with JWT secret first, then RS256 via JWKS.
-    Raises HTTP 401 if the token is missing or invalid.
-
-    Usage:
-        @router.get("/trips")
-        async def get_trips(user: dict = Depends(get_current_user)):
-            user_id = user["sub"]  # Supabase user UUID
-    """
+    # Funkcja używana jako zależność w routerach FastAPI która sprawdza czy użytkownik przysłał ważny token
+    # Wykorzystuje metodę HS256 jako priorytetową oraz RS256 jako rozwiązanie zapasowe
+    # Zgłasza wyjątek HTTP 401 w przypadku braku lub niepoprawności tokena
+    
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -72,22 +63,22 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    # Try HS256 with JWT secret (legacy, primary method)
+    # Próba weryfikacji algorytmem HS256 przy użyciu sekretnego klucza JWT
     if settings.supabase_jwt_secret:
         try:
             payload = jwt.decode(
                 token,
                 settings.supabase_jwt_secret,
                 algorithms=["HS256"],
-                # verify_aud=False: Supabase sets aud="authenticated", not an app URL.
-                # Token integrity is still guaranteed by the SUPABASE_JWT_SECRET signature.
+                # Pominięcie sprawdzania pola audytorium ze względu na domyślną konfigurację systemu Supabase
+                # Bezpieczeństwo jest zapewnione przez weryfikację podpisu SUPABASE_JWT_SECRET
                 options={"verify_aud": False},
             )
             return payload
         except JWTError as e:
             logger.debug(f"HS256 verification failed: {e}")
 
-    # Fallback: RS256 via JWKS
+    # Próba weryfikacji algorytmem RS256/ES256 przy użyciu kluczy publicznych JWKS
     try:
         jwks = await _get_jwks()
         if jwks:
@@ -95,7 +86,6 @@ async def get_current_user(
                 token,
                 jwks,
                 algorithms=["RS256", "ES256"],
-                # verify_aud=False: same reason as above — Supabase aud claim is not an app URL.
                 options={"verify_aud": False},
             )
             return payload
