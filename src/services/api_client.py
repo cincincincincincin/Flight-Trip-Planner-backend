@@ -6,22 +6,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Flaga debugowania: ustawienie na False wyłącza logi diagnostyczne zapytań API
+# Flaga debugowania: True włącza logi diagnostyczne dla wszystkich zapytań API
 DEBUG_API_CALLS = settings.debug_api_calls
 
 def debug_log(message: str):
-    # Loguje komunikat diagnostyczny jeśli DEBUG_API_CALLS jest aktywny
+    # Wyświetla logi diagnostyczne w konsoli, jeśli flaga debugowania jest włączona
     if DEBUG_API_CALLS:
         logger.debug(message)
 
 class AeroDataBoxClient:
-    # Klient niskopoziomowy dla API AeroDataBox obsługujący harmonogramy lotów
-    # Korzysta z platformy RapidAPI do autoryzacji i routingu zapytań
+    # Klient do API AeroDataBox (RapidAPI) obsługujący rozkłady lotów
+    # Służy do wyciągania danych o odlotach, przylotach i lotniskach
 
     BASE_URL = settings.aerodatabox_base_url
 
     def __init__(self):
-        # Inicjalizacja nagłówków autoryzacyjnych na podstawie ustawień systemowych
+        # Konfiguracja autoryzacji na podstawie kluczy z config
         self.api_key = settings.aerodatabox_api_key
         self.rapidapi_host = settings.rapidapi_host
         self.headers = {
@@ -42,8 +42,7 @@ class AeroDataBoxClient:
         with_leg: bool = True,
         with_private: bool = False
     ) -> Optional[Dict[str, Any]]:
-        # Pobiera listę operacji lotniczych (odloty lub przyloty) dla zadanego okna czasowego (max 12h)
-        # Obsługuje precyzyjne filtrowanie lotów cargo, prywatnych oraz współdzielonych (codeshare)
+        # Pobiera listę lotów (odloty/przyloty) dla danego lotniska w oknie czasowym (max 12h)
         url = f"{self.BASE_URL}/flights/airports/iata/{airport_code}/{from_local}/{to_local}"
 
         params = {
@@ -61,7 +60,7 @@ class AeroDataBoxClient:
             async with httpx.AsyncClient(timeout=settings.aerodatabox_timeout) as client:
                 response = await client.get(url, headers=self.headers, params=params)
                 response.raise_for_status()
-                # Obsługa specyficznego kodu 204 oznaczającego brak lotów w danym oknie
+                # Zwraca pustą listę lotów jeśli API odpowie kodem 204
                 if response.status_code == 204:
                     debug_log(f"AeroDataBox API returned 204 No Content for {airport_code}: no flights")
                     return {"departures": [], "arrivals": []}
@@ -80,13 +79,13 @@ class AeroDataBoxClient:
 
 
 class AviasalesClient:
-    # Klient integrujący API Travelpayouts/Aviasales w celu pobierania ofert cenowych
-    # Specjalizuje się w wyszukiwaniu najtańszych połączeń bezpośrednich między miastami
+    # Klient do API Aviasales (Travelpayouts) do pobierania cen biletów
+    # Pozwala na sprawdzanie ofert cenowych na konkretnych trasach między miastami
 
     BASE_URL = settings.aviasales_base_url
 
     def __init__(self):
-        # Inicjalizacja tokena autoryzacyjnego Partner Network
+        # Inicjalizacja tokena do autoryzacji zapytań
         self.api_token = settings.aviasales_api_token
 
     async def get_flight_prices(
@@ -100,8 +99,7 @@ class AviasalesClient:
         limit: int = 1000,
         sorting: str = "price"
     ) -> Optional[Dict[str, Any]]:
-        # Pobiera asynchronicznie zestawienia cen biletów lotniczych dla wybranej trasy międzymiastowej
-        # Umożliwia precyzyjne określenie waluty, limitów wyników oraz rygoru lotów bezpośrednich
+        # Pobiera aktualne zestawienie cen biletów dla wybranej trasy i daty wylotu
         params = {
             "origin": origin,
             "destination": destination,
@@ -139,6 +137,6 @@ class AviasalesClient:
             return None
 
 
-# Globalne instancje (Singleton) klientów API wykorzystywane w serwisach biznesowych
+# Globalne obiekty klientów używane w całej aplikacji
 aerodatabox_client = AeroDataBoxClient()
 aviasales_client = AviasalesClient()

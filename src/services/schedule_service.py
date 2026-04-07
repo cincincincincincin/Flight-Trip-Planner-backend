@@ -13,7 +13,7 @@ import time as time_module
 
 logger = logging.getLogger(__name__)
 
-# Debug flag: False disables diagnostic logs for the service
+# Flaga debugowania: True włącza logi diagnostyczne dla serwisu rozkładów
 DEBUG_SCHEDULE_SERVICE = settings.debug_flight_service
 
 def debug_log(message: str):
@@ -22,32 +22,33 @@ def debug_log(message: str):
 
 
 class ScheduleService:
-    """Service managing airport schedule with individual flight entries."""
+    # Serwis zarządzający rozkładami lotów na lotniskach
 
-    # Minimum interval between API calls (seconds)
+    # Minimalny odstęp między zapytaniami do API (w sekundach)
     MIN_API_CALL_INTERVAL = settings.aerodatabox_api_call_interval
 
-    # Timestamp of the last successful API call
+    # Czas ostatniego udanego zapytania do API (do throttling-u)
     _last_api_call_time = 0.0
 
-    # Local lock for fallback when Redis is unavailable
+    # Lokalna blokada używana gdy Redis nie jest dostępny
     _local_api_call_lock: Optional[asyncio.Lock] = None
 
     @classmethod
     def _get_local_lock(cls) -> asyncio.Lock:
+        # Mechanizm synchronizacji procesów przy braku serwera Redis
         if cls._local_api_call_lock is None:
             cls._local_api_call_lock = asyncio.Lock()
         return cls._local_api_call_lock
 
     @staticmethod
     def _get_chunk_start(dt: datetime) -> datetime:
-        """Determines the start of a 12-hour window (00:00 or 12:00) for stable caching."""
+        # Wyznacza początek 12-godzinnego okna czasowego (00:00 lub 12:00) dla stabilnego cache'u
         hour = 12 if dt.time() >= time(12, 0) else 0
         return dt.replace(hour=hour, minute=0, second=0, microsecond=0)
 
     @staticmethod
     def _get_chunks_for_range(from_dt: datetime, to_dt: datetime, local_today: date) -> list:
-        """Generates a list of timestamps for 12-hour data chunks covering the range."""
+        # Generuje listę punktów startowych dla 12-godzinnych paczek danych w danym zakresie
         _ = local_today
         chunks = []
         current = ScheduleService._get_chunk_start(from_dt)
@@ -58,7 +59,7 @@ class ScheduleService:
 
     @staticmethod
     async def _get_airport_tz(airport_code: str):
-        """Retrieves the airport timezone from the database, defaults to UTC."""
+        # Pobiera strefę czasową lotniska z bazy danych
         async with db.get_connection() as conn:
             timezone_str = await conn.fetchval(
                 "SELECT time_zone FROM airports WHERE code = $1", airport_code
@@ -76,11 +77,11 @@ class ScheduleService:
         from_local_datetime: datetime,
         direction: str = settings.default_flight_direction
     ) -> Optional[Dict]:
-        """Finds a valid cache entry for a specific time window (Hybrid Cache)."""
+        # Szuka ważnego wpisu w cache'u dla konkretnego okna czasowego (Hybrid Cache)
         from_iso = from_local_datetime.isoformat()
         redis_key = f"schedules:{airport_code}:{direction}:{from_iso}"
         
-        # 1. Try Redis (Hybrid Cache)
+        # 1. Próbujemy najpierw w szybkim cache'u Redis
         if cache.is_ready:
             redis_data = await cache.get(redis_key)
             if redis_data:
@@ -89,8 +90,11 @@ class ScheduleService:
                 redis_data['fetch_from_local'] = datetime.fromisoformat(redis_data['fetch_from_local'])
                 redis_data['fetch_to_local'] = datetime.fromisoformat(redis_data['fetch_to_local'])
                 return redis_data
+            
+            # Jeśli Redis działa, ale nie ma klucza, to nie szukamy w SQL
+            return None
 
-        # 2. Fallback to PostgreSQL
+        # 2. Rezerwowo sprawdzamy w bazie PostgreSQL (tylko gdy Redis leży)
         now_utc = datetime.now(pytz.UTC)
         airport_tz = await ScheduleService._get_airport_tz(airport_code)
         local_now = now_utc.astimezone(airport_tz).replace(tzinfo=None)
@@ -126,7 +130,7 @@ class ScheduleService:
 
     @staticmethod
     async def cleanup_expired_cache():
-        """Cleans up expired cache records based on dynamic TTL rules."""
+        # Usuwa przedawnione wpisy z cache'u rozkładów na podstawie reguł TTL
         async with db.get_connection() as conn:
             deleted_count = await conn.execute(f"""
                 DELETE FROM airport_schedules_cache
@@ -148,7 +152,7 @@ class ScheduleService:
         from_local_datetime: datetime,
         direction: str = settings.default_flight_direction
     ) -> AirportScheduleCacheInfo:
-        """Returns flattened cache metadata for a specific time window."""
+        # Zwraca ujednolicone informacje o stanie cache dla konkretnego okna
         from_iso = from_local_datetime.isoformat()
         redis_key = f"schedules:{airport_code}:{direction}:{from_iso}"
 
@@ -162,7 +166,15 @@ class ScheduleService:
                     last_fetched_at=datetime.fromisoformat(redis_data['last_fetched_at']),
                     records_count=0 if redis_data.get('is_empty') else None
                 )
+            
+            # Redis działa i nie ma danych zwracamy brak cache'u
+            return AirportScheduleCacheInfo(
+                airport_code=airport_code,
+                direction=direction,
+                has_cache=False
+            )
 
+        # Rezerwowe sprawdzanie w SQL (gdy Redis nie działa)
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at, fetch_from_local, fetch_to_local
@@ -195,7 +207,7 @@ class ScheduleService:
         flight_data: Dict[str, Any],
         is_departure: bool
     ) -> Optional[Dict[str, Any]]:
-        """Maps AeroDataBox entry to a standardized Flight dictionary."""
+        # Mapuje surowe dane o locie z API AeroDataBox na nasz wewnętrzny format
         try:
             flight_number = flight_data.get('number')
             if not flight_number:
@@ -265,16 +277,16 @@ class ScheduleService:
                     'departure_gate': dep_obj.get('gate')
                 }
         except Exception as e:
-            logger.error(f"Error parsing entry: {str(e)}")
+            logger.error(f"Error parsing schedule: {str(e)}")
             return None
 
     @staticmethod
     async def _save_flights_to_db(conn, flights_data: List[Dict[str, Any]]) -> int:
-        """Saves parsed flights to the database using an upsert operation."""
+        # Zapisuje przetworzone dane o lotach do bazy
         saved_count = 0
         for flight_data in flights_data:
             try:
-                # Basic airport existence check before saving
+                # Sprawdzenie czy lotniska istnieją w naszej bazie przed zapisem lotu
                 if flight_data.get('origin_airport_code'):
                     origin_exists = await conn.fetchval(
                         "SELECT EXISTS(SELECT 1 FROM airports WHERE code = $1)",
@@ -320,7 +332,7 @@ class ScheduleService:
                 )
                 saved_count += 1
             except Exception as e:
-                logger.error(f"Error saving entry: {str(e)}")
+                logger.error(f"Error saving schedule: {str(e)}")
                 raise
         return saved_count
 
@@ -330,8 +342,8 @@ class ScheduleService:
         from_local_datetime: Optional[datetime] = None,
         direction: str = settings.default_flight_direction
     ) -> Tuple[bool, Optional[datetime], Optional[datetime]]:
-        """Fetches flights from the API for a 12-hour window and caches them."""
-        debug_log(f"Fetching flights for {airport_code} from {from_local_datetime}")
+        # Pobiera loty z API dla 12-godzinnego okna i zapisuje je w cache'u (Redis + SQL)
+        debug_log(f"Pobieranie lotów dla {airport_code} od {from_local_datetime}")
         await ScheduleService.cleanup_expired_cache()
 
         airport_tz = await ScheduleService._get_airport_tz(airport_code)
@@ -346,6 +358,7 @@ class ScheduleService:
         from_local_str = from_time.strftime("%Y-%m-%dT%H:%M")
         to_local_str = to_time.strftime("%Y-%m-%dT%H:%M")
 
+        # Blokada API, żeby nie przekroczyć limitów przy wielu zapytaniach naraz
         redis_lock = cache.get_lock("aerodatabox_api", timeout=30)
         lock_to_use = redis_lock if redis_lock else ScheduleService._get_local_lock()
 
@@ -395,6 +408,7 @@ class ScheduleService:
         else:
             ttl_sec = int(settings.flight_cache_far_expiry_hours * 3600)
 
+        # Odświeżenie szybkiego cache'u w Redisie
         if cache.is_ready:
             from_iso = from_time.isoformat()
             redis_key = f"schedules:{airport_code}:{direction}:{from_iso}"
@@ -405,6 +419,7 @@ class ScheduleService:
             }
             await cache.set(redis_key, redis_value, ttl=ttl_sec)
         else:
+            # Rezerwowy zapis do SQL
             async with db.get_connection() as conn:
                 await conn.execute("""
                     INSERT INTO airport_schedules_cache 
@@ -427,7 +442,7 @@ class ScheduleService:
         force_refresh: bool = False,
         to_local_datetime: Optional[datetime] = None
     ) -> AsyncGenerator[Schedule, None]:
-        """Incremental async generator returning airport schedule in 12h chunks."""
+        # Generator asynchroniczny zwracający rozkład lotów lotniska w 12-godzinnych paczkach
         direction = settings.default_flight_direction
         if from_local_datetime is None:
             from_local_datetime = datetime.utcnow().replace(second=0, microsecond=0)
@@ -458,15 +473,14 @@ class ScheduleService:
             query_end   = min(chunk_end, end_of_query)
 
             async with db.get_connection() as conn:
-                # Optimized SQL query: removed redundant airport joins and city codes
+                # Pobieranie paczki lotów z bazy dla aktualnego okna czasowego
                 rows = await conn.fetch("""
                     SELECT
-                        id, flight_number, airline_code, airline_name,
+                        flight_number, airline_code, airline_name,
                         origin_airport_code, destination_airport_code,
                         scheduled_departure_utc, scheduled_departure_local,
                         scheduled_arrival_utc, scheduled_arrival_local,
-                        departure_terminal, departure_gate,
-                        created_at
+                        departure_terminal, departure_gate
                     FROM flights
                     WHERE origin_airport_code = $1
                       AND scheduled_departure_local >= $2
@@ -499,7 +513,7 @@ class ScheduleService:
         force_refresh: bool = False,
         to_local_datetime: Optional[datetime] = None,
     ) -> Schedule:
-        """Blocking method to aggregate full airport schedule in the given range."""
+        # Skleja wszystkie mniejsze paczki lotów w jeden pełny rozkład dla danego zakresu
         flights = []
         last_fetched_at = None
         range_end_datetime = None
@@ -525,5 +539,5 @@ class ScheduleService:
             range_end_datetime=range_end_datetime
         )
 
-# Global instance of the schedule service
+# Globalny obiekt serwisu rozkładów lotów
 schedule_service = ScheduleService()

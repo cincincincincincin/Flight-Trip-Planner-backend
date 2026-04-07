@@ -7,11 +7,11 @@ from src.models.preference import PreferencesPayload
 logger = logging.getLogger(__name__)
 
 class PreferenceService:
-    """Service for managing user's search and display preferences."""
+    # Serwis do zarządzania preferencjami użytkownika (waluta, motyw itp.)
 
     @staticmethod
     async def get_preferences(user_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves user's saved preferences."""
+        # Pobiera zapisane ustawienia użytkownika z bazy danych
         async with db.get_connection() as conn:
             row = await conn.fetchrow(
                 "SELECT data FROM user_preferences WHERE user_id = $1",
@@ -23,7 +23,7 @@ class PreferenceService:
 
     @staticmethod
     async def save_preferences(user_id: str, data: Dict[str, Any]) -> None:
-        """Saves or updates user's preferences (Upsert)."""
+        # Zapisuje lub aktualizuje preferencje użytkownika (operacja Upsert)
         async with db.get_connection() as conn:
             await conn.execute(
                 """
@@ -37,5 +37,5 @@ class PreferenceService:
                 json.dumps(data),
             )
 
-# Global instance
+# Globalna instancja serwisu preferencji
 preference_service = PreferenceService()

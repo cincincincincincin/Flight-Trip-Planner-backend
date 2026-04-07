@@ -26,12 +26,12 @@ CREATE TABLE airport_schedules_cache (
     UNIQUE(airport_code, direction, fetch_from_local)
 );
 
--- Pojedyncze loty (Ultra-Lean: brak złączeń, nazwa linii bezpośrednio w wierszu)
+-- Pojedyncze loty
 CREATE TABLE flights (
     id SERIAL PRIMARY KEY,
     flight_number VARCHAR(20) NOT NULL,
     airline_code VARCHAR(3),
-    airline_name VARCHAR(200), -- Przechowywana bezpośrednio (Fresh from API)
+    airline_name VARCHAR(200),
     origin_airport_code VARCHAR(4) NOT NULL,
     destination_airport_code VARCHAR(4) NOT NULL,
     scheduled_departure_utc TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -60,8 +60,8 @@ CREATE TABLE flight_prices_cache (
 -- Pojedyncze oferty biletów (Ultra-Lean: nazwa linii bezpośrednio)
 CREATE TABLE flight_offers (
     id SERIAL PRIMARY KEY,
-    origin_city_code VARCHAR(10) NOT NULL,
-    destination_city_code VARCHAR(10) NOT NULL,
+    origin_city_code VARCHAR(3) NOT NULL,
+    destination_city_code VARCHAR(3) NOT NULL,
     origin_airport_code VARCHAR(4) NOT NULL,
     destination_airport_code VARCHAR(4) NOT NULL,
     price DECIMAL(10, 2) NOT NULL,

@@ -15,7 +15,8 @@ class _PydanticEncoder(json.JSONEncoder):
 
 logger = logging.getLogger(__name__)
 
-# System pamięci podręcznej wykorzystujący bazę Redis która przechowuje dane w pamięci RAM
+# Zarządzanie pamięcią podręczną oparte o bazę danych Redis, która przechowuje dane w pamięci RAM
+# Wykorzystujemy wzorzec Singleton, żeby cały projekt korzystał z tego samego połączenia
 # Zastosowany wzorzec Cache-Aside polega na tym że aplikacja najpierw sprawdza cache
 # a dopiero gdy tam nie ma danych to odpytuje bazę postgres i uzupełnia brakujący wpis
 class RedisCache:
@@ -23,7 +24,8 @@ class RedisCache:
         self._client: Optional[aioredis.Redis] = None
 
     async def connect(self):
-        # Inicjalizacja połączenia oraz sprawdzenie dostępności serwera Redis
+        # Inicjalizacja połączenia oraz sprawdzenie dostępności serwera Redis na podstawie
+        # parametrów z pliku konfiguracyjnego
         try:
             self._client = aioredis.from_url(
                 settings.redis_url,
@@ -40,23 +42,26 @@ class RedisCache:
 
     @property
     def is_ready(self) -> bool:
-        # Informuje czy system cache jest aktualnie dostępny
+        # Mechanizm który sprawdza czy klient Redisa został poprawnie zainicjalizowany
+        # i czy system cache jest aktualnie dostępny
         return self._client is not None
 
     def get_lock(self, name: str, timeout: float = 10.0) -> Any:
-        # Zwraca obiekt blokady rozproszonej Redis, jeśli klient jest połączony
+        # Wykorzystanie mechanizmu blokad Redis (Distributed Locks) do zarządzania 
+        # dostępem do zasobów w środowisku wieloprocesowym
         if self._client:
             return self._client.lock(f"lock:{name}", timeout=timeout)
         return None
 
     async def disconnect(self):
-        # Zamykanie aktywnej sesji podczas kończenia pracy przez serwer
+        # Zamknięcie sesji i zwolnienie zasobów w momencie gdy serwer kończy pracę
         if self._client:
             await self._client.aclose()
             logger.info("Redis disconnected")
 
     async def get(self, key: str) -> Optional[Any]:
-        # Pobieranie danych dla konkretnego klucza lub None w przypadku braku danych lub błędu
+        # Pobieranie wartości dla podanego klucza oraz automatyczna zamiana 
+        # tekstu JSON na słowniki Pythona co pozwala uniknąć ręcznej konwersji
         if not self._client:
             return None
         try:
@@ -67,7 +72,8 @@ class RedisCache:
             return None
 
     async def set(self, key: str, value: Any, ttl: int) -> None:
-        # Zapis danych w cache z określonym czasem ważności TTL
+        # Zapisywanie danych w Redisie wraz z czasem wygaśnięcia TTL co zapobiega
+        # nieskończonemu trzymaniu nieaktualnych informacji i zapychaniu pamięci RAM
         if not self._client:
             return
         try:
@@ -76,7 +82,8 @@ class RedisCache:
             logger.warning(f"Redis SET error for '{key}': {e}")
 
     async def cached(self, key: str, ttl: int, fn: Callable[[], Awaitable[Any]]) -> Any:
-        # Funkcja, która automatycznie sprawdza cache i pobiera dane jeśli ich brakuje
+        # Funkcja opakowująca która automatycznie obsługuje logikę sprawdzania cache'u
+        # i pobierania świeżych danych z bazy w przypadku ich braku
         hit = await self.get(key)
         if hit is not None:
             logger.debug(f"Cache HIT: {key}")
@@ -87,5 +94,5 @@ class RedisCache:
         await self.set(key, result, ttl)
         return result
 
-# Jeden wspólny obiekt obsługujący pamięć podręczną w całym projekcie
+# Singleton - jeden wspólny obiekt obsługujący pamięć podręczną w całym projekcie
 cache = RedisCache()

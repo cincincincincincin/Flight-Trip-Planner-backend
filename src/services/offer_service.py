@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, date, timedelta
 from src.database import db
-from src.models.offer import Offer, Offers, OfferCacheInfo
+from src.models.offer import Offer, OfferCacheInfo
 from src.services.api_client import aviasales_client
 from src.config import settings
 from src.cache import cache
@@ -12,7 +12,7 @@ import time as time_module
 
 logger = logging.getLogger(__name__)
 
-# Flag debug: wyłącza logi diagnostyczne dla serwisu cen
+# Flaga debugowania: True wyświetla logi diagnostyczne dla serwisu cen
 DEBUG_OFFER_SERVICE = settings.debug_price_service
 
 def debug_log(message: str):
@@ -21,7 +21,7 @@ def debug_log(message: str):
 
 
 class OfferService:
-    # Serwis zarządzający ofertami cenowymi pobieranymi z API Aviasales
+    # Serwis do zarządzania ofertami cenowymi pobieranymi z API Aviasales
 
     @staticmethod
     async def get_cache_info(
@@ -30,7 +30,7 @@ class OfferService:
         departure_date: date,
         currency: str = settings.default_currency
     ) -> OfferCacheInfo:
-        # Zwraca metadane cache dla konkretnej trasy, daty i waluty
+        # Zwraca informacje o stanie cache dla konkretnej trasy i daty
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at,
@@ -66,16 +66,21 @@ class OfferService:
         departure_date: date,
         currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
-        # Sprawdza, czy cache cen jest jeszcze ważny według reguł TTL
+        # Sprawdza czy cache cen jest jeszcze aktualny na podstawie reguł TTL
         date_iso = departure_date.isoformat()
         redis_key = f"prices:{origin_city_code}:{destination_city_code}:{date_iso}:{currency.upper()}"
         
+        # Próbujemy najpierw sprawdzić w szybkim cache'u Redis
         if cache.is_ready:
             redis_data = await cache.get(redis_key)
             if redis_data:
-                debug_log(f"Redis Price Cache HIT dla {origin_city_code}->{destination_city_code} @ {date_iso}")
+                debug_log(f"Redis Price Cache HIT for {origin_city_code}->{destination_city_code} @ {date_iso}")
                 return True, datetime.fromisoformat(redis_data['last_fetched_at'])
+            
+            # Jeśli Redis działa i nie ma klucza, uznajemy to za brak cache'u (Zero-Waste)
+            return False, None
 
+        # Jak nie ma w Redisie (lub leży), to sprawdzamy w bazie SQL
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
                 SELECT last_fetched_at as last_fetched, data
@@ -96,6 +101,7 @@ class OfferService:
         is_near = departure_date <= (now_utc.date() + timedelta(days=1))
         is_empty = not data or not data.get('data') or len(data.get('data')) == 0
         
+        # Dynamiczne ustawianie ważności cache (pusty/bliski/daleki termin)
         if is_empty:
             expiry_delta = timedelta(hours=settings.price_cache_empty_ttl_hours)
         elif is_near:
@@ -110,7 +116,7 @@ class OfferService:
 
     @staticmethod
     async def cleanup_expired_cache():
-        # Czyści stare wpisy w cache cen z bazy danych
+        # Czyści przedawnione wpisy o cenach z bazy danych
         async with db.get_connection() as conn:
             deleted_count = await conn.execute(f"""
                 DELETE FROM flight_prices_cache
@@ -124,7 +130,7 @@ class OfferService:
                     (data->'data' = '[]'::jsonb AND last_fetched_at < (NOW() - INTERVAL '{settings.price_cache_empty_ttl_hours} hour'))
             """)
             if deleted_count != "DELETE 0":
-                debug_log(f"Wyczyszczono wygasły cache ofert: {deleted_count}")
+                debug_log(f"Cleaned up expired offer cache: {deleted_count}")
 
     @staticmethod
     def _parse_offer_from_api(
@@ -133,7 +139,7 @@ class OfferService:
         destination_city_code: str,
         currency: str = settings.default_currency
     ) -> Optional[Dict[str, Any]]:
-        # Konwertuje surowe dane z API zewnętrzne na format wewnętrzny
+        # Przerabia surowe dane z API zewnętrzne na nasz format wewnętrzny
         try:
             origin_airport = offer_data.get('origin_airport')
             destination_airport = offer_data.get('destination_airport')
@@ -148,7 +154,7 @@ class OfferService:
                 departure_dt = datetime.fromisoformat(departure_str).replace(tzinfo=None)
                 departure_dt = departure_dt.replace(second=0, microsecond=0)
             except Exception as e:
-                debug_log(f"Błąd parsowania czasu wylotu: {e}")
+                debug_log(f"Error parsing local departure time: {e}")
                 return None
 
             if offer_data.get('transfers', 0) > 0:
@@ -176,12 +182,12 @@ class OfferService:
                 'api_raw': offer_data
             }
         except Exception as e:
-            logger.error(f"Błąd parsowania oferty: {str(e)}")
+            logger.error(f"Error parsing offer: {str(e)}")
             return None
 
     @staticmethod
     async def _save_offers_to_db(conn, offers_data: List[Dict[str, Any]]) -> int:
-        # Zapisuje przetworzone oferty do bazy danych (Upsert)
+        # Zapisuje przetworzone oferty do bazy danych (operacja Upsert)
         saved_count = 0
         for offer_data in offers_data:
             try:
@@ -211,7 +217,7 @@ class OfferService:
                 )
                 saved_count += 1
             except Exception as e:
-                logger.error(f"Błąd zapisu oferty: {str(e)}")
+                logger.error(f"Error saving offer: {str(e)}")
                 raise
         return saved_count
 
@@ -222,9 +228,9 @@ class OfferService:
         departure_date: date,
         currency: str = settings.default_currency
     ) -> Tuple[bool, Optional[datetime]]:
-        # Pobiera świeże ceny z API i zapisuje je w cache (Redis + DB)
+        # Pobiera świeże ceny z API i odświeża cache (Redis + SQL)
         await OfferService.cleanup_expired_cache()
-        debug_log(f"Pobieranie ofert dla {origin_city_code}->{destination_city_code}")
+        debug_log(f"Fetching offers for {origin_city_code}->{destination_city_code}")
 
         departure_at = departure_date.strftime("%Y-%m-%d")
         api_response = await aviasales_client.get_flight_prices(
@@ -261,11 +267,13 @@ class OfferService:
         else:
             ttl_sec = int(settings.price_cache_far_expiry_hours * 3600)
 
+        # Aktualizacja szybkiego cache'u w Redisie
         if cache.is_ready:
             date_iso = departure_date.isoformat()
             redis_key = f"prices:{origin_city_code}:{destination_city_code}:{date_iso}:{currency.upper()}"
             await cache.set(redis_key, {"last_fetched_at": now_utc.isoformat()}, ttl=ttl_sec)
         else:
+            # Rezerwowy zapis do bazy SQL jeśli Redis nie jest dostępny
             async with db.get_connection() as conn:
                 await conn.execute("""
                     INSERT INTO flight_prices_cache 
@@ -289,8 +297,8 @@ class OfferService:
         destination_city_code: Optional[str] = None,
         currency: str = settings.default_currency,
         force_refresh: bool = False
-    ) -> Offers:
-        # Pobiera oferty dla konkretnej trasy i czasu (Smart Match)
+    ) -> Optional[Offer]:
+        # Pobiera najlepszą ofertę dla konkretnej trasy i czasu (Smart Match)
         departure_date = departure_at.date()
         
         if not origin_city_code or not destination_city_code:
@@ -301,8 +309,9 @@ class OfferService:
                     destination_city_code = await conn.fetchval("SELECT city_code FROM airports WHERE code = $1", destination_airport_code)
 
         if not origin_city_code or not destination_city_code:
-            return Offers(data=[], count=0)
+            return None
 
+        # Sprawdzamy czy mamy świeży zestaw cen w cache'u
         cache_valid, last_fetched = await OfferService.is_cache_valid(origin_city_code, destination_city_code, departure_date, currency)
 
         if force_refresh or not cache_valid:
@@ -312,13 +321,13 @@ class OfferService:
             departure_at = departure_at.replace(tzinfo=None)
 
         async with db.get_connection() as conn:
-            rows = await conn.fetch("""
+            # Szukamy najtańszej oferty dopasowanej czasowo (okno +/- 5 minut)
+            row = await conn.fetchrow("""
                 SELECT
-                    fo.id, fo.origin_city_code, fo.destination_city_code,
+                    fo.origin_city_code, fo.destination_city_code,
                     fo.origin_airport_code, fo.destination_airport_code,
                     fo.price, fo.currency, fo.airline_code, 
-                    fo.flight_number, fo.departure_at, fo.link,
-                    fo.created_at
+                    fo.flight_number, fo.departure_at, fo.link
                 FROM flight_offers fo
                 WHERE fo.origin_airport_code = $1
                   AND fo.destination_airport_code = $2
@@ -331,8 +340,10 @@ class OfferService:
                 LIMIT 1
             """, origin_airport_code, destination_airport_code, currency.upper(), departure_at, flight_number)
 
-            offers = [Offer(**dict(row)) for row in rows]
-            return Offers(data=offers, count=len(offers), last_fetched_at=last_fetched)
+            if not row:
+                return None
+
+            return Offer(**dict(row))
 
     @staticmethod
     async def get_offers_for_city_pair(
@@ -341,8 +352,8 @@ class OfferService:
         departure_date: date,
         currency: str = settings.default_currency,
         force_refresh: bool = False
-    ) -> Offers:
-        # Pobiera wszystkie dostępne oferty dla pary miast
+    ) -> List[Offer]:
+        # Pobiera wszystkie dostępne oferty cenowe dla danej pary miast
         cache_valid, last_fetched = await OfferService.is_cache_valid(origin_city_code, destination_city_code, departure_date, currency)
 
         if force_refresh or not cache_valid:
@@ -351,11 +362,10 @@ class OfferService:
         async with db.get_connection() as conn:
             rows = await conn.fetch("""
                 SELECT
-                    fo.id, fo.origin_city_code, fo.destination_city_code,
+                    fo.origin_city_code, fo.destination_city_code,
                     fo.origin_airport_code, fo.destination_airport_code,
                     fo.price, fo.currency, fo.airline_code, fo.flight_number,
-                    fo.departure_at, fo.link,
-                    fo.created_at
+                    fo.departure_at, fo.link
                 FROM flight_offers fo
                 WHERE fo.origin_city_code = $1
                   AND fo.destination_city_code = $2
@@ -364,8 +374,7 @@ class OfferService:
                 ORDER BY fo.price ASC
             """, origin_city_code, destination_city_code, departure_date, currency.upper())
 
-            offers = [Offer(**dict(row)) for row in rows]
-            return Offers(data=offers, count=len(offers), last_fetched_at=last_fetched)
+            return [Offer(**dict(row)) for row in rows]
 
-# Globalna instancja serwisu ofert
+# Globalny obiekt serwisu ofert
 offer_service = OfferService()

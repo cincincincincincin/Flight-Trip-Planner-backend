@@ -9,6 +9,7 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Endpointy do pobierania rozkładów lotów dla lotnisk
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 @router.get("/{airport_code}")
@@ -16,15 +17,12 @@ router = APIRouter(prefix="/schedules", tags=["schedules"])
 async def get_airport_schedule(
     request: Request,
     airport_code: str = Path(..., description="IATA airport code (e.g., 'WAW')"),
-    from_local_datetime: str = Query(..., description="Start of window in local airport time (YYYY-MM-DDTHH:MM:SS)."),
-    to_local_datetime: str = Query(..., description="End of window in local airport time (YYYY-MM-DDTHH:MM:SS)."),
+    from_local_datetime: str = Query(..., description="Start of window in local airport time (YYYY-MM-DDTHH:MM)."),
+    to_local_datetime: str = Query(..., description="End of window in local airport time (YYYY-MM-DDTHH:MM)."),
     limit: int = Query(200, ge=1, le=2000, description="Max results"),
-    force_refresh: bool = Query(False, description="Force refresh from API")
+    force_refresh: bool = Query(False, description="Force new data from external API")
 ):
-    """
-    Zwraca strumień lotów dla wybranego lotniska w formacie NDJSON.
-    Logika ta pozwala na płynne renderowanie listy na froncie.
-    """
+    # Pobiera strumień lotów dla wybranego lotniska w formacie NDJSON (paczki 12h)
     try:
         try:
             parsed_from_dt = datetime.fromisoformat(from_local_datetime)
@@ -38,7 +36,7 @@ async def get_airport_schedule(
 
         async def response_generator():
             try:
-                # Wykorzystujemy asynchroniczny generator rozkładu
+                # Wykorzystujemy generator do strumieniowania danych w paczkach 12-godzinnych
                 async for batch in schedule_service.stream_schedule_from_airport(
                     airport_code=airport_code.upper(),
                     from_local_datetime=parsed_from_dt,

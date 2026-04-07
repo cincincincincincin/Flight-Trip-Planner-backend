@@ -7,18 +7,18 @@ from src.models.trip import SaveTripRequest, TripResponse
 logger = logging.getLogger(__name__)
 
 class TripService:
-    """Service for managing user's saved trips."""
+    # Serwis do zarządzania zapisanymi podróżami użytkowników
 
     @staticmethod
     async def list_trips(user_id: str) -> List[Dict[str, Any]]:
-        """Retrieves all saved trips for a specific user."""
+        # Pobiera listę wszystkich zapisanych tras danego użytkownika z bazy
         async with db.get_connection() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, user_id, name, trip_state, created_at, updated_at
+                SELECT id, user_id, name, trip_state
                 FROM user_trips
                 WHERE user_id = $1
-                ORDER BY updated_at DESC
+                ORDER BY created_at DESC
                 """,
                 user_id,
             )
@@ -28,21 +28,19 @@ class TripService:
                 "user_id": row["user_id"],
                 "name": row["name"],
                 "trip_state": json.loads(row["trip_state"]) if isinstance(row["trip_state"], str) else row["trip_state"],
-                "created_at": row["created_at"],
-                "updated_at": row["updated_at"],
             }
             for row in rows
         ]
 
     @staticmethod
     async def save_trip(user_id: str, body: SaveTripRequest) -> Dict[str, Any]:
-        """Saves a new trip for a user."""
+        # Zapisuje nową trasę użytkownika w bazie danych
         async with db.get_connection() as conn:
             row = await conn.fetchrow(
                 """
                 INSERT INTO user_trips (user_id, name, trip_state)
                 VALUES ($1, $2, $3::jsonb)
-                RETURNING id, user_id, name, trip_state, created_at, updated_at
+                RETURNING id, user_id, name, trip_state
                 """,
                 user_id,
                 body.name,
@@ -54,20 +52,18 @@ class TripService:
             "user_id": row["user_id"],
             "name": row["name"],
             "trip_state": json.loads(row["trip_state"]) if isinstance(row["trip_state"], str) else row["trip_state"],
-            "created_at": row["created_at"],
-            "updated_at": row["updated_at"],
         }
 
     @staticmethod
     async def update_trip(user_id: str, trip_id: int, body: SaveTripRequest) -> Optional[Dict[str, Any]]:
-        """Updates an existing trip. Returns None if trip not found or access denied."""
+        # Aktualizuje nazwę lub zawartość istniejącej już podróży
         async with db.get_connection() as conn:
             row = await conn.fetchrow(
                 """
                 UPDATE user_trips
                 SET name = $1, trip_state = $2::jsonb, updated_at = NOW()
                 WHERE id = $3 AND user_id = $4
-                RETURNING id, user_id, name, trip_state, created_at, updated_at
+                RETURNING id, user_id, name, trip_state
                 """,
                 body.name,
                 json.dumps(body.trip_state.model_dump()),
@@ -82,13 +78,11 @@ class TripService:
             "user_id": row["user_id"],
             "name": row["name"],
             "trip_state": json.loads(row["trip_state"]) if isinstance(row["trip_state"], str) else row["trip_state"],
-            "created_at": row["created_at"],
-            "updated_at": row["updated_at"],
         }
 
     @staticmethod
     async def delete_trip(user_id: str, trip_id: int) -> bool:
-        """Deletes a trip. Returns True if successful, False if not found."""
+        # Usuwa wpis o podróży z bazy danych
         async with db.get_connection() as conn:
             result = await conn.execute(
                 "DELETE FROM user_trips WHERE id = $1 AND user_id = $2",
@@ -97,5 +91,5 @@ class TripService:
             )
         return result != "DELETE 0"
 
-# Global instance
+# Globalny obiekt serwisu podróży
 trip_service = TripService()

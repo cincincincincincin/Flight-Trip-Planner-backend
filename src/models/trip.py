@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional, Any, List
-from datetime import datetime
 
 class TripLeg(BaseModel):
     # Pojedynczy etap podróży między lotniskami
@@ -20,10 +19,8 @@ class SaveTripRequest(BaseModel):
     trip_state: TripStatePayload
 
 class TripResponse(BaseModel):
-    # Kompletne dane trasy wyjęte z bazy
+    # Kompletne dane trasy
     id: int
     user_id: str
     name: Optional[str]
     trip_state: dict[str, Any]
-    created_at: datetime
-    updated_at: datetime

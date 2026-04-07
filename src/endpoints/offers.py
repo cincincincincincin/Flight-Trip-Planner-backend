@@ -4,15 +4,15 @@ from datetime import datetime
 from fastapi import APIRouter, Query, HTTPException, Request
 from src.services.offer_service import offer_service
 from src.limiter import limiter
-from src.models.offer import Offers
+from src.models.offer import Offer
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Endpointy do pobierania ofert cenowych (zintegrowane z API zewnętrznym i cache)
+# Endpointy do sprawdzania i pobierania aktualnych cen dla lotów
 router = APIRouter(prefix="/offers", tags=["offers"])
 
-@router.get("/", response_model=Offers)
+@router.get("/", response_model=Offer)
 @limiter.limit(settings.rate_limit_flights)
 async def get_flight_offers(
     request: Request,
@@ -23,10 +23,10 @@ async def get_flight_offers(
     currency: str = Query(settings.default_currency, description="Currency code: PLN, USD, EUR, GBP"),
     force_refresh: bool = Query(False, description="Force refresh from API")
 ):
-    # Zwraca oferty cenowe dla konkretnej trasy i czasu wylotu
-    # Wykorzystuje mechanizm Smart Match z oknem +/- 5 minut na backendzie
+    # Zwraca ofertę cenową dla konkretnego połączenia i czasu wylotu
+    # Dopasowuje ofertę w oknie +/- 5 minut (Smart Match)
     try:
-        return await offer_service.get_offers_for_route(
+        offer = await offer_service.get_offers_for_route(
             origin_airport_code=origin.upper(),
             destination_airport_code=destination.upper(),
             departure_at=departure_at,
@@ -34,6 +34,11 @@ async def get_flight_offers(
             currency=currency.upper(),
             force_refresh=force_refresh
         )
+        if not offer:
+            raise HTTPException(status_code=404, detail="No offer found for the selected flight.")
+        return offer
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error getting offers for {origin}->{destination}: {str(e)}")
+        logger.error(f"Error getting offer for {origin}->{destination}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
