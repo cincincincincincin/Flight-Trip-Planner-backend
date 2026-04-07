@@ -16,12 +16,12 @@ async def get_preferences(user: dict = Depends(get_current_user)):
     user_id: str = user["sub"]
     data = await preference_service.get_preferences(user_id)
     if data is None:
-        raise HTTPException(status_code=404, detail="Nie znaleziono zapisanych preferencji")
+        raise HTTPException(status_code=404, detail="No preferences saved")
     return {"data": data}
 
 @router.put("", response_model=PreferencesResponse)
 async def save_preferences(body: PreferencesPayload, user: dict = Depends(get_current_user)):
-    # Zapisuje lub aktualizuje preferencje użytkownika (operacja Upsert)
+    # Zapisuje lub aktualizuje preferencje użytkownika
     user_id: str = user["sub"]
     data_dict = body.data.model_dump()
     await preference_service.save_preferences(user_id, data_dict)

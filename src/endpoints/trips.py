@@ -18,7 +18,7 @@ async def list_trips(user: dict = Depends(get_current_user)):
 
 @router.post("", response_model=TripResponse, status_code=201)
 async def save_trip(body: SaveTripRequest, user: dict = Depends(get_current_user)):
-    # Zapisuje nową trasę użytkownika w bazie danych
+    # Zapisuje nową podróż użytkownika
     user_id: str = user["sub"]
     return await trip_service.save_trip(user_id, body)
 
@@ -28,11 +28,11 @@ async def update_trip(
     trip_id: int = Path(...),
     user: dict = Depends(get_current_user),
 ):
-    # Aktualizuje dane istniejącej już podróży (nazwę lub stan)
+    # Aktualizuje istniejącą podróż użytkownika
     user_id: str = user["sub"]
     trip = await trip_service.update_trip(user_id, trip_id, body)
     if not trip:
-        raise HTTPException(status_code=404, detail="Nie znaleziono podróży lub brak dostępu")
+        raise HTTPException(status_code=404, detail="Trip not found or access denied")
     return trip
 
 @router.delete("/{trip_id}", status_code=204)
@@ -40,8 +40,8 @@ async def delete_trip(
     trip_id: int = Path(...),
     user: dict = Depends(get_current_user),
 ):
-    # Usuwa wybraną podróż z bazy danych
+    # Usuwa podróż użytkownika
     user_id: str = user["sub"]
     success = await trip_service.delete_trip(user_id, trip_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Nie znaleziono podróży lub brak dostępu")
+        raise HTTPException(status_code=404, detail="Trip not found or access denied")

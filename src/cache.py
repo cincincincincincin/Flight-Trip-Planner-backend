@@ -17,15 +17,12 @@ logger = logging.getLogger(__name__)
 
 # Zarządzanie pamięcią podręczną oparte o bazę danych Redis, która przechowuje dane w pamięci RAM
 # Wykorzystujemy wzorzec Singleton, żeby cały projekt korzystał z tego samego połączenia
-# Zastosowany wzorzec Cache-Aside polega na tym że aplikacja najpierw sprawdza cache
-# a dopiero gdy tam nie ma danych to odpytuje bazę postgres i uzupełnia brakujący wpis
 class RedisCache:
     def __init__(self):
         self._client: Optional[aioredis.Redis] = None
 
     async def connect(self):
-        # Inicjalizacja połączenia oraz sprawdzenie dostępności serwera Redis na podstawie
-        # parametrów z pliku konfiguracyjnego
+        # Inicjalizacja połączenia oraz sprawdzenie dostępności serwera Redis
         try:
             self._client = aioredis.from_url(
                 settings.redis_url,
@@ -42,19 +39,17 @@ class RedisCache:
 
     @property
     def is_ready(self) -> bool:
-        # Mechanizm który sprawdza czy klient Redisa został poprawnie zainicjalizowany
-        # i czy system cache jest aktualnie dostępny
+        # Informuje czy system cache jest aktualnie dostępny
         return self._client is not None
 
     def get_lock(self, name: str, timeout: float = 10.0) -> Any:
-        # Wykorzystanie mechanizmu blokad Redis (Distributed Locks) do zarządzania 
-        # dostępem do zasobów w środowisku wieloprocesowym
+        # Zwraca obiekt blokady rozproszonej Redis, jeśli klient jest połączony
         if self._client:
             return self._client.lock(f"lock:{name}", timeout=timeout)
         return None
 
     async def disconnect(self):
-        # Zamknięcie sesji i zwolnienie zasobów w momencie gdy serwer kończy pracę
+        # Zamykanie aktywnej sesji podczas kończenia pracy przez serwer
         if self._client:
             await self._client.aclose()
             logger.info("Redis disconnected")
@@ -94,5 +89,5 @@ class RedisCache:
         await self.set(key, result, ttl)
         return result
 
-# Singleton - jeden wspólny obiekt obsługujący pamięć podręczną w całym projekcie
+# Jeden wspólny obiekt obsługujący pamięć podręczną w całym projekcie
 cache = RedisCache()

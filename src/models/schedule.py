@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 class Flight(BaseModel):
-    # Podstawowe dane lotu - Ultra-Lean (bez technicznych pól ID/created_at)
+    # Podstawowe dane lotu
     flight_number: str = Field(..., description="Unique flight identifier")
     airline_code: Optional[str] = Field(default=None, description="IATA code of the airline operating the flight")
     airline_name: Optional[str] = Field(default=None, description="Full name of the airline")
@@ -25,7 +25,7 @@ class Schedule(BaseModel):
     range_end_datetime: Optional[str] = Field(default=None, description="ISO timestamp for the end of the fetched time window")
 
 class AirportScheduleCacheInfo(BaseModel):
-    # Informacja o stanie cache dla lotniska
+    # Stan cache dla rozkładu konkretnego lotniska
     airport_code: str = Field(..., description="3-letter IATA airport code")
     direction: str = Field(..., description="Flight flow direction (Departure/Arrival)")
     has_cache: bool = Field(..., description="Indicates if valid cache exists")
