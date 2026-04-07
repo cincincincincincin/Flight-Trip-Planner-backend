@@ -1,10 +1,10 @@
 from pydantic import BaseModel
 from typing import Any, Dict
 
-# Modele Pydantic obsługujące preferencje systemowe i wizualne użytkownika
+# Modele obsługujące ustawienia systemowe i wizualne użytkownika
 
 class SettingsPrefs(BaseModel):
-    # Parametry konfiguracyjne aplikacji (język, waluta, limity czasowe przesiadek)
+    # Parametry konfiguracyjne (język, waluta, limity przesiadek)
     language: str
     currency: str
     min_transfer_hours: float
@@ -13,20 +13,20 @@ class SettingsPrefs(BaseModel):
     show_console_logs: bool
 
 class MapPrefs(BaseModel):
-    # Ustawienia wizualizacji geograficznej (styl mapy, tryb globusa)
+    # Ustawienia wizualne mapy (styl, tryb globusa)
     map_style: str
     globe_mode: bool
 
 class PreferencesData(BaseModel):
-    # Zbiorcza struktura danych zawierająca ustawienia, ustawienia mapy oraz stan kolorystyki
+    # Zbiorcza struktura wszystkich ustawień i kolorów
     settings: SettingsPrefs
     map: MapPrefs
-    colors: Dict[str, Any]  # Nieprzezroczysty stan synchronizowany z colorStore
+    colors: Dict[str, Any]
 
 class PreferencesPayload(BaseModel):
-    # Model żądania zapisu preferencji wysyłany z frontendowej warstwy aplikacji
+    # Żądanie zapisu nowych ustawień
     data: PreferencesData
 
 class PreferencesResponse(BaseModel):
-    # Model odpowiedzi serwera dostarczający kompletny zestaw preferencji użytkownika
+    # Odpowiedź API z aktualnymi ustawieniami
     data: PreferencesData

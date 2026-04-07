@@ -10,7 +10,8 @@ from src.config import settings
 from src.database import db
 from src.cache import cache
 from src.limiter import limiter
-from src.endpoints.flights import router as flights_router
+from src.endpoints.schedules import router as schedules_router
+from src.endpoints.offers import router as offers_router
 from src.endpoints.trips import router as trips_router
 from src.endpoints.preferences import router as preferences_router
 import logging
@@ -103,7 +104,8 @@ app.add_middleware(
 
 # Endpointy API (Routery)
 
-app.include_router(flights_router)
+app.include_router(schedules_router)
+app.include_router(offers_router)
 app.include_router(trips_router)
 app.include_router(preferences_router)
 
@@ -114,8 +116,10 @@ async def root():
         "status": "running",
         "version": "1.0.0",
         "endpoints": {
-            "flights": "/flights",
+            "schedules": "/schedules",
+            "offers": "/offers",
             "trips": "/trips",
+            "preferences": "/preferences",
         },
     }
 

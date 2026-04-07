@@ -38,6 +38,17 @@ class RedisCache:
             logger.warning(f"Redis unavailable (cache disabled): {e}")
             self._client = None
 
+    @property
+    def is_ready(self) -> bool:
+        # Informuje czy system cache jest aktualnie dostępny
+        return self._client is not None
+
+    def get_lock(self, name: str, timeout: float = 10.0) -> Any:
+        # Zwraca obiekt blokady rozproszonej Redis, jeśli klient jest połączony
+        if self._client:
+            return self._client.lock(f"lock:{name}", timeout=timeout)
+        return None
+
     async def disconnect(self):
         # Zamykanie aktywnej sesji podczas kończenia pracy przez serwer
         if self._client:

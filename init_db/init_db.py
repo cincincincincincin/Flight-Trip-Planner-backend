@@ -57,18 +57,13 @@ def init_db():
             print("Loading JSON data")
             queries = [
                 ("cities.json", """
-                    INSERT INTO cities (code, name, name_translations, country_code, coordinates)
-                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'country_code', elem->'coordinates'
-                    FROM jsonb_array_elements(%s::jsonb) AS elem;
-                """),
-                ("airlines.json", """
-                    INSERT INTO airlines (code, name)
-                    SELECT elem->>'code', elem->>'name'
+                    INSERT INTO cities (code)
+                    SELECT elem->>'code'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
                 ("airports.json", """
-                    INSERT INTO airports (code, name, name_translations, city_code, country_code, time_zone, coordinates, urls)
-                    SELECT elem->>'code', elem->>'name', elem->'name_translations', elem->>'city_code', elem->>'country_code', elem->>'time_zone', elem->'coordinates', elem->'urls'
+                    INSERT INTO airports (code, city_code, time_zone)
+                    SELECT elem->>'code', elem->>'city_code', elem->>'time_zone'
                     FROM jsonb_array_elements(%s::jsonb) AS elem;
                 """),
             ]

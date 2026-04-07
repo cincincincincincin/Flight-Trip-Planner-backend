@@ -9,11 +9,10 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Integracja z systemem Supabase służąca do weryfikacji tożsamości użytkowników przy pomocy podpisanych tokenów JWT
-# System obsługuje dwa sposoby sprawdzania podpisu czyli algorytm symetryczny HS256
-# oraz asymetryczny RS256 pobierający klucze publiczne z adresu JWKS
+# Weryfikacja użytkowników Supabase przez tokeny JWT.
+# Obsługujemy dwa algorytmy: HS256 (klucz symetryczny) oraz RS256 (klucze publiczne z JWKS).
 
-# Podręczna kopia kluczy publicznych która jest ważna przez godzinę w celu ograniczenia liczby zapytań
+# Cache kluczy publicznych
 _jwks_cache: Optional[dict] = None
 _jwks_fetched_at: float = 0.0
 JWKS_TTL_SECONDS = settings.supabase_jwks_ttl
@@ -22,8 +21,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def _get_jwks() -> Optional[dict]:
-    # Pobieranie i zapisywanie kluczy publicznych Supabase potrzebnych do weryfikacji asymetrycznej
-    # Zwraca None w przypadku braku adresu URL serwera auth
+    # Pobieranie aktualnych kluczy publicznych z serwera Supabase dla weryfikacji RS256.
     global _jwks_cache, _jwks_fetched_at
 
     if not settings.supabase_url:
@@ -50,9 +48,8 @@ async def _get_jwks() -> Optional[dict]:
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> dict:
-    # Funkcja używana jako zależność w routerach FastAPI która sprawdza czy użytkownik przysłał ważny token
-    # Wykorzystuje metodę HS256 jako priorytetową oraz RS256 jako rozwiązanie zapasowe
-    # Zgłasza wyjątek HTTP 401 w przypadku braku lub niepoprawności tokena
+    # Zależność FastAPI sprawdzająca ważność tokena
+    # Wykorzystuje HS256 oraz RS256 jako fallback
     
     if not credentials:
         raise HTTPException(
@@ -63,22 +60,22 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    # Próba weryfikacji algorytmem HS256 przy użyciu sekretnego klucza JWT
+    # Weryfikacja algorytmem HS256 przy użyciu klucza JWT_SECRET
     if settings.supabase_jwt_secret:
         try:
             payload = jwt.decode(
                 token,
                 settings.supabase_jwt_secret,
                 algorithms=["HS256"],
-                # Pominięcie sprawdzania pola audytorium ze względu na domyślną konfigurację systemu Supabase
-                # Bezpieczeństwo jest zapewnione przez weryfikację podpisu SUPABASE_JWT_SECRET
+                # Supabase domyślnie ustawia aud na 'authenticated', więc wyłączamy jego sprawdzanie.
+                # Sam podpis tokena unikalnym kluczem daje nam wystarczającą pewność.
                 options={"verify_aud": False},
             )
             return payload
         except JWTError as e:
             logger.debug(f"HS256 verification failed: {e}")
 
-    # Próba weryfikacji algorytmem RS256/ES256 przy użyciu kluczy publicznych JWKS
+    # Jeśli HS256 zawiedzie, próbujemy asymetrycznego RS256/ES256 z kluczami JWKS.
     try:
         jwks = await _get_jwks()
         if jwks:
@@ -86,6 +83,7 @@ async def get_current_user(
                 token,
                 jwks,
                 algorithms=["RS256", "ES256"],
+                # Tutaj też odpuszczamy 'aud', bo klucze publiczne potwierdzają pochodzenie tokena.
                 options={"verify_aud": False},
             )
             return payload

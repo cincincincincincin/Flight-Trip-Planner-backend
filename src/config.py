@@ -54,13 +54,18 @@ class Settings(BaseSettings):
     supabase_jwks_fetch_timeout: float = Field(5.0)
 
     # Konfiguracja serwisu lotów AeroDataBox
-    flight_cache_expiry_hours: int = Field(1)
+    flight_cache_near_expiry_minutes: int = Field(60)
+    flight_cache_far_expiry_hours: int = Field(24)
+    flight_cache_empty_expiry_days: int = Field(7)
+    flight_cache_empty_ttl_sec: int = Field(604800)  # 7 days in seconds
     aerodatabox_api_call_interval: float = Field(1.5)
     aerodatabox_window_hours: int = Field(12)
     debug_flight_service: bool = Field(True)
 
     # Konfiguracja serwisu cen biletów Aviasales
-    price_cache_expiry_hours: int = Field(6)
+    price_cache_near_expiry_minutes: int = Field(30)
+    price_cache_far_expiry_hours: int = Field(6)
+    price_cache_empty_ttl_hours: int = Field(24)
     aviasales_default_limit: int = Field(1000)
     debug_price_service: bool = Field(True)
     
