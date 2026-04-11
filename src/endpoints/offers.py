@@ -35,7 +35,8 @@ async def get_flight_offers(
             force_refresh=force_refresh
         )
         if not offer:
-            raise HTTPException(status_code=404, detail="No offer found for the selected flight.")
+            from fastapi import Response
+            return Response(status_code=204)
         return offer
     except HTTPException:
         raise
