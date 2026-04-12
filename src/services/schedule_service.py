@@ -31,14 +31,23 @@ class ScheduleService:
     _last_api_call_time = 0.0
 
     # Lokalna blokada używana gdy Redis nie jest dostępny
-    _local_api_call_lock: Optional[asyncio.Lock] = None
+    _local_api_call_locks: Dict[str, asyncio.Lock] = {}
+    
+    # [v24.90]: Globalny strażnik odstępu między zapytaniami (Throttle Mutex)
+    _api_throttle_lock: Optional[asyncio.Lock] = None
 
     @classmethod
-    def _get_local_lock(cls) -> asyncio.Lock:
+    def _get_local_lock(cls, name: str = "default") -> asyncio.Lock:
         # Mechanizm synchronizacji procesów przy braku serwera Redis
-        if cls._local_api_call_lock is None:
-            cls._local_api_call_lock = asyncio.Lock()
-        return cls._local_api_call_lock
+        if name not in cls._local_api_call_locks:
+            cls._local_api_call_locks[name] = asyncio.Lock()
+        return cls._local_api_call_locks[name]
+    
+    @classmethod
+    def _get_throttle_lock(cls) -> asyncio.Lock:
+        if cls._api_throttle_lock is None:
+            cls._api_throttle_lock = asyncio.Lock()
+        return cls._api_throttle_lock
 
     @staticmethod
     def _get_chunk_start(dt: datetime) -> datetime:
@@ -358,21 +367,33 @@ class ScheduleService:
         from_local_str = from_time.strftime("%Y-%m-%dT%H:%M")
         to_local_str = to_time.strftime("%Y-%m-%dT%H:%M")
 
-        # Blokada API, żeby nie przekroczyć limitów przy wielu zapytaniach naraz
-        redis_lock = cache.get_lock("aerodatabox_api", timeout=30)
-        lock_to_use = redis_lock if redis_lock else ScheduleService._get_local_lock()
+        # [v24.90]: Blokada specyficzna dla lotniska (per-airport lock), aby zapobiec duplikatom
+        # Nie blokuje ona innych lotnisk, jedynie inne requesty o TEN SAM fragment tego lotniska.
+        airport_lock_name = f"aerodatabox_api:{airport_code}:{from_time.isoformat()}"
+        redis_airport_lock = cache.get_lock(airport_lock_name, timeout=60)
+        airport_lock = redis_airport_lock if redis_airport_lock else ScheduleService._get_local_lock(airport_lock_name)
 
-        async with lock_to_use:
-            time_since_last_call = time_module.time() - ScheduleService._last_api_call_time
-            if time_since_last_call < ScheduleService.MIN_API_CALL_INTERVAL:
-                sleep_time = ScheduleService.MIN_API_CALL_INTERVAL - time_since_last_call
-                await asyncio.sleep(sleep_time)
-
+        async with airport_lock:
+            # Sprawdzamy cache ponownie wewnątrz blokady lotniska
             cached_again = await ScheduleService.find_cache_for_datetime(airport_code, from_time, direction)
             if cached_again:
                 return True, cached_again['last_fetched_at'], None
 
-            ScheduleService._last_api_call_time = time_module.time()
+            # [v24.90]: Globalny strażnik odstępu (Throttle Mutex)
+            # Trzymamy go tylko przez moment wyliczania i czekania na "slot" czasowy.
+            throttle_lock = ScheduleService._get_throttle_lock()
+            async with throttle_lock:
+                time_since_last_call = time_module.time() - ScheduleService._last_api_call_time
+                if time_since_last_call < ScheduleService.MIN_API_CALL_INTERVAL:
+                    sleep_time = ScheduleService.MIN_API_CALL_INTERVAL - time_since_last_call
+                    await asyncio.sleep(sleep_time)
+                
+                # Rezerwujemy slot i aktualizujemy czas
+                ScheduleService._last_api_call_time = time_module.time()
+                # LOCK ODSTĘPU ZWALNIANY TUTAJ (koniec bloku async with)
+            
+            # WŁAŚCIWE ZAPYTANIE API (wykonywane poza globalną blokadą, ale wewnątrz blokady lotniska)
+            # Dzięki temu wiele lotnisk może "wisieć" na połączeniach HTTP naraz.
             api_response = await aerodatabox_client.get_airport_departures(
                 airport_code=airport_code,
                 from_local=from_local_str,
@@ -458,52 +479,70 @@ class ScheduleService:
             end_of_query = datetime.combine(from_local_datetime.date(), time.max)
 
         chunks_needed = ScheduleService._get_chunks_for_range(from_local_datetime, end_of_query, local_today)
-        for i, chunk_start in enumerate(chunks_needed):
-            chunk_end = chunk_start + timedelta(hours=12)
-            
-            if force_refresh:
-                await ScheduleService.fetch_and_cache_schedule_chunk(airport_code, chunk_start, direction)
-            
+        
+        # [v24.85]: Równoległe "rozgrzewanie" (warming) cache'u dla wszystkich potrzebnych paczek
+        # Pozwala to uniknąć sekwencyjnego czekania 1.5s na każdą paczkę z osobna.
+        async def warm_chunk(chunk_start):
             info = await ScheduleService.find_cache_for_datetime(airport_code, chunk_start, direction)
-            if not info:
+            if not info or force_refresh:
                 await ScheduleService.fetch_and_cache_schedule_chunk(airport_code, chunk_start, direction)
+
+        try:
+            # Uruchamiamy zadania rozgrzewania w tle
+            warming_tasks = [asyncio.create_task(warm_chunk(c)) for c in chunks_needed]
+
+            for i, chunk_start in enumerate(chunks_needed):
+                chunk_end = chunk_start + timedelta(hours=12)
+                
+                # Czekamy na zakończenie rozgrzewania tej konkretnej paczki (mogło się już zakończyć w tle)
+                await warming_tasks[i]
+                
+                # Pobieramy aktualne info o cache po operacji warming
                 info = await ScheduleService.find_cache_for_datetime(airport_code, chunk_start, direction)
-            
-            query_start = from_local_datetime if i == 0 else chunk_start
-            query_end   = min(chunk_end, end_of_query)
+                
+                query_start = from_local_datetime if i == 0 else chunk_start
+                query_end   = min(chunk_end, end_of_query)
 
-            async with db.get_connection() as conn:
-                # Pobieranie paczki lotów z bazy dla aktualnego okna czasowego
-                rows = await conn.fetch("""
-                    SELECT
-                        flight_number, airline_code, airline_name,
-                        origin_airport_code, destination_airport_code,
-                        scheduled_departure_utc, scheduled_departure_local,
-                        scheduled_arrival_utc, scheduled_arrival_local,
-                        departure_terminal, departure_gate
-                    FROM flights
-                    WHERE origin_airport_code = $1
-                      AND scheduled_departure_local >= $2
-                      AND scheduled_departure_local <= $3
-                    ORDER BY scheduled_departure_local ASC
-                    LIMIT $4
-                """, airport_code, query_start, query_end, limit)
+                async with db.get_connection() as conn:
+                    # Pobieranie paczki lotów z bazy dla aktualnego okna czasowego
+                    rows = await conn.fetch("""
+                        SELECT
+                            flight_number, airline_code, airline_name,
+                            origin_airport_code, destination_airport_code,
+                            scheduled_departure_utc, scheduled_departure_local,
+                            scheduled_arrival_utc, scheduled_arrival_local,
+                            departure_terminal, departure_gate
+                        FROM flights
+                        WHERE origin_airport_code = $1
+                          AND scheduled_departure_local >= $2
+                          AND scheduled_departure_local <= $3
+                        ORDER BY scheduled_departure_local ASC
+                        LIMIT $4
+                    """, airport_code, query_start, query_end, limit)
 
-                total_count = await conn.fetchval("""
-                    SELECT COUNT(*)
-                    FROM flights
-                    WHERE origin_airport_code = $1
-                      AND scheduled_departure_local >= $2
-                      AND scheduled_departure_local <= $3
-                """, airport_code, query_start, query_end)
+                    total_count = await conn.fetchval("""
+                        SELECT COUNT(*)
+                        FROM flights
+                        WHERE origin_airport_code = $1
+                          AND scheduled_departure_local >= $2
+                          AND scheduled_departure_local <= $3
+                    """, airport_code, query_start, query_end)
 
-            flights = [Flight(**dict(row)) for row in rows]
-            yield Schedule(
-                data=flights,
-                count=total_count or 0,
-                last_fetched_at=info['last_fetched_at'] if info else None,
-                range_end_datetime=query_end.isoformat()
-            )
+                flights = [Flight(**dict(row)) for row in rows]
+                yield Schedule(
+                    data=flights,
+                    count=total_count or 0,
+                    last_fetched_at=info['last_fetched_at'] if info else None,
+                    range_end_datetime=query_end.isoformat()
+                )
+        except asyncio.CancelledError:
+            # [v24.85]: Przerwanie połączenia przez klienta (abort) -> zatrzymujemy oczekiwanie na API
+            debug_log(f"Stream for {airport_code} cancelled by client. Stopping fetches.")
+            # Próbujemy przerwać zadania, które jeszcze nie ruszyły
+            for task in warming_tasks:
+                if not task.done():
+                    task.cancel()
+            raise
 
     @staticmethod
     async def get_schedule_from_airport(
