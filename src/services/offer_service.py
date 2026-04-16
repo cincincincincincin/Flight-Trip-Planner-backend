@@ -33,8 +33,7 @@ class OfferService:
         # Zwraca informacje o stanie cache dla konkretnej trasy i daty
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
-                SELECT last_fetched_at,
-                       jsonb_array_length(data->'data') as records_count
+                SELECT last_fetched_at
                 FROM flight_prices_cache
                 WHERE origin_city_code = $1
                   AND destination_city_code = $2
@@ -43,13 +42,19 @@ class OfferService:
             """, origin_city_code, destination_city_code, departure_date, currency.upper())
 
             if row:
+                # Sprawdzamy liczbę rekordów w tabeli flight_offers zamiast w JSONB
+                records_count = await conn.fetchval("""
+                    SELECT COUNT(*) FROM flight_offers
+                    WHERE origin_city_code = $1 AND destination_city_code = $2 AND DATE(departure_at) = $3 AND currency = $4
+                """, origin_city_code, destination_city_code, departure_date, currency.upper())
+
                 return OfferCacheInfo(
                     origin_city_code=origin_city_code,
                     destination_city_code=destination_city_code,
                     departure_date=departure_date,
                     has_cache=True,
                     last_fetched_at=row['last_fetched_at'],
-                    records_count=row['records_count']
+                    records_count=records_count or 0
                 )
 
             return OfferCacheInfo(
@@ -83,7 +88,7 @@ class OfferService:
         # Jak nie ma w Redisie (lub leży), to sprawdzamy w bazie SQL
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
-                SELECT last_fetched_at as last_fetched, data
+                SELECT last_fetched_at as last_fetched
                 FROM flight_prices_cache
                 WHERE origin_city_code = $1
                   AND destination_city_code = $2
@@ -95,11 +100,19 @@ class OfferService:
             return False, None
 
         last_fetched = row['last_fetched']
-        data = row['data']
         
+        # Sprawdzamy czy mamy jakiekolwiek oferty dla tej trasy
+        async with db.get_connection() as conn:
+            offers_exist = await conn.fetchval("""
+                SELECT EXISTS(
+                    SELECT 1 FROM flight_offers 
+                    WHERE origin_city_code = $1 AND destination_city_code = $2 AND DATE(departure_at) = $3 AND currency = $4
+                )
+            """, origin_city_code, destination_city_code, departure_date, currency.upper())
+        
+        is_empty = not offers_exist
         now_utc = datetime.now(pytz.UTC)
         is_near = departure_date <= (now_utc.date() + timedelta(days=1))
-        is_empty = not data or not data.get('data') or len(data.get('data')) == 0
         
         # Dynamiczne ustawianie ważności cache (pusty/bliski/daleki termin)
         if is_empty:
@@ -119,15 +132,15 @@ class OfferService:
         # Czyści przedawnione wpisy o cenach z bazy danych
         async with db.get_connection() as conn:
             deleted_count = await conn.execute(f"""
-                DELETE FROM flight_prices_cache
+                DELETE FROM flight_prices_cache fpc
                 WHERE 
-                    (data->'data' != '[]'::jsonb AND (
+                    (EXISTS(SELECT 1 FROM flight_offers fo WHERE fo.origin_city_code = fpc.origin_city_code AND fo.destination_city_code = fpc.destination_city_code AND DATE(fo.departure_at) = fpc.departure_date AND fo.currency = fpc.currency) AND (
                         (departure_date <= (CURRENT_DATE + 1) AND last_fetched_at < (NOW() - INTERVAL '{settings.price_cache_near_expiry_minutes} minute'))
                         OR
                         (departure_date > (CURRENT_DATE + 1) AND last_fetched_at < (NOW() - INTERVAL '{settings.price_cache_far_expiry_hours} hour'))
                     ))
                     OR
-                    (data->'data' = '[]'::jsonb AND last_fetched_at < (NOW() - INTERVAL '{settings.price_cache_empty_ttl_hours} hour'))
+                    (NOT EXISTS(SELECT 1 FROM flight_offers fo WHERE fo.origin_city_code = fpc.origin_city_code AND fo.destination_city_code = fpc.destination_city_code AND DATE(fo.departure_at) = fpc.departure_date AND fo.currency = fpc.currency) AND last_fetched_at < (NOW() - INTERVAL '{settings.price_cache_empty_ttl_hours} hour'))
             """)
             if deleted_count != "DELETE 0":
                 debug_log(f"Cleaned up expired offer cache: {deleted_count}")
@@ -178,8 +191,7 @@ class OfferService:
                 'airline_code': airline_code,
                 'flight_number': flight_number,
                 'departure_at': departure_dt,
-                'link': offer_data.get('link'),
-                'api_raw': offer_data
+                'link': offer_data.get('link')
             }
         except Exception as e:
             logger.error(f"Error parsing offer: {str(e)}")
@@ -196,12 +208,11 @@ class OfferService:
                         origin_city_code, destination_city_code,
                         origin_airport_code, destination_airport_code,
                         price, currency, airline_code, 
-                        flight_number, departure_at, link, api_raw
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                        flight_number, departure_at, link
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     ON CONFLICT (origin_airport_code, destination_airport_code, departure_at, flight_number, price)
                     DO UPDATE SET
-                        link = EXCLUDED.link,
-                        api_raw = EXCLUDED.api_raw
+                        link = EXCLUDED.link
                 """,
                     offer_data['origin_city_code'],
                     offer_data['destination_city_code'],
@@ -212,8 +223,7 @@ class OfferService:
                     offer_data['airline_code'],
                     offer_data['flight_number'],
                     offer_data['departure_at'],
-                    offer_data['link'],
-                    json.dumps(offer_data['api_raw'], default=str)
+                    offer_data['link']
                 )
                 saved_count += 1
             except Exception as e:
@@ -277,13 +287,12 @@ class OfferService:
             async with db.get_connection() as conn:
                 await conn.execute("""
                     INSERT INTO flight_prices_cache 
-                    (origin_city_code, destination_city_code, departure_date, currency, last_fetched_at, data)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    (origin_city_code, destination_city_code, departure_date, currency, last_fetched_at)
+                    VALUES ($1, $2, $3, $4, $5)
                     ON CONFLICT (origin_city_code, destination_city_code, departure_date, currency)
                     DO UPDATE SET
-                        last_fetched_at = EXCLUDED.last_fetched_at,
-                        data = EXCLUDED.data
-                """, origin_city_code, destination_city_code, departure_date, currency.upper(), now_utc, json.dumps(api_response))
+                        last_fetched_at = EXCLUDED.last_fetched_at
+                """, origin_city_code, destination_city_code, departure_date, currency.upper(), now_utc)
 
         return True, now_utc
 

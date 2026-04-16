@@ -20,7 +20,7 @@ CREATE TABLE airport_schedules_cache (
     airport_code VARCHAR(4) NOT NULL,
     direction VARCHAR(10) NOT NULL CHECK (direction IN ('Departure', 'Arrival', 'Both')),
     last_fetched_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    data JSONB NOT NULL,
+    is_empty BOOLEAN DEFAULT FALSE,
     fetch_from_local TIMESTAMP NOT NULL,
     fetch_to_local TIMESTAMP NOT NULL,
     UNIQUE(airport_code, direction, fetch_from_local)
@@ -40,7 +40,6 @@ CREATE TABLE flights (
     scheduled_arrival_local TIMESTAMP,
     departure_terminal VARCHAR(10),
     departure_gate VARCHAR(10),
-    api_raw JSONB, -- Pełna odpowiedź z API (aircraft, status, etc.)
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE(flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
 );
@@ -53,7 +52,6 @@ CREATE TABLE flight_prices_cache (
     departure_date DATE NOT NULL,
     currency VARCHAR(3) NOT NULL,
     last_fetched_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    data JSONB NOT NULL,
     UNIQUE(origin_city_code, destination_city_code, departure_date, currency)
 );
 
@@ -70,7 +68,6 @@ CREATE TABLE flight_offers (
     flight_number VARCHAR(20),
     departure_at TIMESTAMP NOT NULL,
     link TEXT,
-    api_raw JSONB, -- Pełna odpowiedź z API (gate, transfers, duration, etc.)
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     UNIQUE(origin_airport_code, destination_airport_code, departure_at, flight_number, price)
 );

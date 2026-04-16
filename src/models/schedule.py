@@ -13,8 +13,8 @@ class Flight(BaseModel):
     scheduled_departure_local: Optional[datetime] = Field(default=None, description="Local departure time")
     scheduled_arrival_utc: Optional[datetime] = Field(default=None, description="UTC arrival time")
     scheduled_arrival_local: Optional[datetime] = Field(default=None, description="Local arrival time")
-    departure_terminal: Optional[str] = Field(default=None, description="Departure terminal info")
-    departure_gate: Optional[str] = Field(default=None, description="Departure gate info")
+    departure_terminal: Optional[str] = Field(default=None, description="Departure terminal")
+    departure_gate: Optional[str] = Field(default=None, description="Departure gate")
 
 class Schedule(BaseModel):
     # Batch danych rozkładowych przesyłany w NDJSON
@@ -30,4 +30,4 @@ class AirportScheduleCacheInfo(BaseModel):
     direction: str = Field(..., description="Flight flow direction (Departure/Arrival)")
     has_cache: bool = Field(..., description="Indicates if valid cache exists")
     last_fetched_at: Optional[datetime] = Field(default=None, description="Last cache update timestamp")
-    records_count: Optional[int] = Field(default=None, description="Number of stored records")
+    is_empty: bool = Field(default=False, description="Indicates if the API returned no flights for this window")

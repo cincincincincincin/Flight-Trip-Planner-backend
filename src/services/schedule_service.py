@@ -33,7 +33,7 @@ class ScheduleService:
     # Lokalna blokada używana gdy Redis nie jest dostępny
     _local_api_call_locks: Dict[str, asyncio.Lock] = {}
     
-    # [v24.90]: Globalny strażnik odstępu między zapytaniami (Throttle Mutex)
+    # Globalna blokada częstotliwości zapytań
     _api_throttle_lock: Optional[asyncio.Lock] = None
 
     @classmethod
@@ -117,16 +117,16 @@ class ScheduleService:
 
         async with db.get_connection() as conn:
             row = await conn.fetchrow(f"""
-                SELECT id, last_fetched_at, fetch_from_local, fetch_to_local, data
+                SELECT id, last_fetched_at, fetch_from_local, fetch_to_local, is_empty
                 FROM airport_schedules_cache
                 WHERE airport_code = $1
                   AND direction = $2
                   AND fetch_from_local <= $3
                   AND fetch_to_local >= $3
                   AND (
-                    ((data->'departures' != '[]'::jsonb OR data->'arrivals' != '[]'::jsonb) AND last_fetched_at > (NOW() - INTERVAL '{interval}'))
+                    (is_empty = FALSE AND last_fetched_at > (NOW() - INTERVAL '{interval}'))
                     OR
-                    ((data->'departures' = '[]'::jsonb AND data->'arrivals' = '[]'::jsonb) AND last_fetched_at > (NOW() - INTERVAL '{settings.flight_cache_empty_expiry_days} day'))
+                    (is_empty = TRUE AND last_fetched_at > (NOW() - INTERVAL '{settings.flight_cache_empty_expiry_days} day'))
                   )
                 ORDER BY fetch_from_local DESC
                 LIMIT 1
@@ -144,13 +144,13 @@ class ScheduleService:
             deleted_count = await conn.execute(f"""
                 DELETE FROM airport_schedules_cache
                 WHERE 
-                    ((data->'departures' != '[]'::jsonb OR data->'arrivals' != '[]'::jsonb) AND (
+                    (is_empty = FALSE AND (
                         (fetch_from_local <= (NOW() + INTERVAL '24 hour') AND last_fetched_at < (NOW() - INTERVAL '{settings.flight_cache_near_expiry_minutes} minute'))
                         OR
                         (fetch_from_local > (NOW() + INTERVAL '24 hour') AND last_fetched_at < (NOW() - INTERVAL '{settings.flight_cache_far_expiry_hours} hour'))
                     ))
                     OR
-                    ((data->'departures' = '[]'::jsonb AND data->'arrivals' = '[]'::jsonb) AND last_fetched_at < (NOW() - INTERVAL '{settings.flight_cache_empty_expiry_days} day'))
+                    (is_empty = TRUE AND last_fetched_at < (NOW() - INTERVAL '{settings.flight_cache_empty_expiry_days} day'))
             """)
             if deleted_count != "DELETE 0":
                 debug_log(f"Cleaned up expired schedule cache: {deleted_count}")
@@ -173,7 +173,7 @@ class ScheduleService:
                     direction=direction,
                     has_cache=True,
                     last_fetched_at=datetime.fromisoformat(redis_data['last_fetched_at']),
-                    records_count=0 if redis_data.get('is_empty') else None
+                    is_empty=redis_data.get('is_empty', False)
                 )
             
             # Redis działa i nie ma danych zwracamy brak cache'u
@@ -186,7 +186,7 @@ class ScheduleService:
         # Rezerwowe sprawdzanie w SQL (gdy Redis nie działa)
         async with db.get_connection() as conn:
             row = await conn.fetchrow("""
-                SELECT last_fetched_at, fetch_from_local, fetch_to_local
+                SELECT last_fetched_at, fetch_from_local, fetch_to_local, is_empty
                 FROM airport_schedules_cache
                 WHERE airport_code = $1
                   AND direction = $2
@@ -202,7 +202,7 @@ class ScheduleService:
                     direction=direction,
                     has_cache=True,
                     last_fetched_at=row['last_fetched_at'],
-                    records_count=None
+                    is_empty=row['is_empty']
                 )
 
             return AirportScheduleCacheInfo(
@@ -269,8 +269,8 @@ class ScheduleService:
                     'departure_gate': dep_obj.get('gate')
                 }
             else:
-                dep_airport = dep_obj.get('airport', {})
-                origin_airport_code = dep_airport.get('iata') or dep_airport.get('icao')
+                dep_airport = dep_obj.get('departure', {})
+                origin_airport_code = dep_airport.get('airport', {}).get('iata') or dep_airport.get('airport', {}).get('icao')
                 if not arr_sched_utc or not origin_airport_code:
                     return None
                 return {
@@ -316,15 +316,15 @@ class ScheduleService:
                         origin_airport_code, destination_airport_code,
                         scheduled_departure_utc, scheduled_departure_local,
                         scheduled_arrival_utc, scheduled_arrival_local,
-                        departure_terminal, departure_gate, api_raw
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        departure_terminal, departure_gate
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     ON CONFLICT (flight_number, scheduled_departure_utc, origin_airport_code, destination_airport_code)
                     DO UPDATE SET
                         airline_name = EXCLUDED.airline_name,
                         scheduled_arrival_utc = EXCLUDED.scheduled_arrival_utc,
                         scheduled_arrival_local = EXCLUDED.scheduled_arrival_local,
-                        departure_gate = EXCLUDED.departure_gate,
-                        api_raw = EXCLUDED.api_raw
+                        departure_terminal = EXCLUDED.departure_terminal,
+                        departure_gate = EXCLUDED.departure_gate
                 """,
                     flight_data['flight_number'],
                     flight_data['airline_code'],
@@ -335,9 +335,8 @@ class ScheduleService:
                     flight_data['scheduled_departure_local'],
                     flight_data['scheduled_arrival_utc'],
                     flight_data['scheduled_arrival_local'],
-                    flight_data['departure_terminal'],
-                    flight_data['departure_gate'],
-                    json.dumps(flight_data, default=str)
+                    flight_data.get('departure_terminal'),
+                    flight_data.get('departure_gate')
                 )
                 saved_count += 1
             except Exception as e:
@@ -367,8 +366,8 @@ class ScheduleService:
         from_local_str = from_time.strftime("%Y-%m-%dT%H:%M")
         to_local_str = to_time.strftime("%Y-%m-%dT%H:%M")
 
-        # [v24.90]: Blokada specyficzna dla lotniska (per-airport lock), aby zapobiec duplikatom
-        # Nie blokuje ona innych lotnisk, jedynie inne requesty o TEN SAM fragment tego lotniska.
+        # Blokada specyficzna dla lotniska, zapobiegająca powstawaniu duplikatów przy równoległych żądaniach
+        # Zapobiega ona jedynie wielu żądaniom o ten sam segment danych tego samego lotniska.
         airport_lock_name = f"aerodatabox_api:{airport_code}:{from_time.isoformat()}"
         redis_airport_lock = cache.get_lock(airport_lock_name, timeout=60)
         airport_lock = redis_airport_lock if redis_airport_lock else ScheduleService._get_local_lock(airport_lock_name)
@@ -379,8 +378,8 @@ class ScheduleService:
             if cached_again:
                 return True, cached_again['last_fetched_at'], None
 
-            # [v24.90]: Globalny strażnik odstępu (Throttle Mutex)
-            # Trzymamy go tylko przez moment wyliczania i czekania na "slot" czasowy.
+            # Globalny strażnik odstępu między zapytaniami API
+            # Blokuje dostęp tylko na czas rezerwacji slotu czasowego.
             throttle_lock = ScheduleService._get_throttle_lock()
             async with throttle_lock:
                 time_since_last_call = time_module.time() - ScheduleService._last_api_call_time
@@ -436,7 +435,8 @@ class ScheduleService:
             redis_value = {
                 "last_fetched_at": now_utc.isoformat(),
                 "fetch_from_local": from_time.isoformat(),
-                "fetch_to_local": to_time.isoformat()
+                "fetch_to_local": to_time.isoformat(),
+                "is_empty": is_empty
             }
             await cache.set(redis_key, redis_value, ttl=ttl_sec)
         else:
@@ -444,14 +444,14 @@ class ScheduleService:
             async with db.get_connection() as conn:
                 await conn.execute("""
                     INSERT INTO airport_schedules_cache 
-                    (airport_code, direction, fetch_from_local, fetch_to_local, last_fetched_at, data)
+                    (airport_code, direction, fetch_from_local, fetch_to_local, last_fetched_at, is_empty)
                     VALUES ($1, $2, $3, $4, $5, $6)
                     ON CONFLICT (airport_code, direction, fetch_from_local) 
                     DO UPDATE SET 
                         last_fetched_at = EXCLUDED.last_fetched_at,
-                        data = EXCLUDED.data,
+                        is_empty = EXCLUDED.is_empty,
                         fetch_to_local = EXCLUDED.fetch_to_local
-                """, airport_code, direction, from_time, to_time, now_utc, json.dumps(api_response))
+                """, airport_code, direction, from_time, to_time, now_utc, is_empty)
 
         return True, now_utc, to_time
 
@@ -480,8 +480,8 @@ class ScheduleService:
 
         chunks_needed = ScheduleService._get_chunks_for_range(from_local_datetime, end_of_query, local_today)
         
-        # [v24.85]: Równoległe "rozgrzewanie" (warming) cache'u dla wszystkich potrzebnych paczek
-        # Pozwala to uniknąć sekwencyjnego czekania 1.5s na każdą paczkę z osobna.
+        # Równoległe pobieranie do pamięci podręcznej (warming) dla wszystkich potrzebnych paczek
+        # Pozwala to uniknąć sekwencyjnego czekania na każdą paczkę z osobna.
         async def warm_chunk(chunk_start):
             info = await ScheduleService.find_cache_for_datetime(airport_code, chunk_start, direction)
             if not info or force_refresh:
@@ -536,7 +536,7 @@ class ScheduleService:
                     range_end_datetime=query_end.isoformat()
                 )
         except asyncio.CancelledError:
-            # [v24.85]: Przerwanie połączenia przez klienta (abort) -> zatrzymujemy oczekiwanie na API
+            # Przerwanie połączenia przez klienta – zatrzymujemy pobieranie danych z API
             debug_log(f"Stream for {airport_code} cancelled by client. Stopping fetches.")
             # Próbujemy przerwać zadania, które jeszcze nie ruszyły
             for task in warming_tasks:

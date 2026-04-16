@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     flight_cache_far_expiry_hours: int = Field(24)
     flight_cache_empty_expiry_days: int = Field(7)
     flight_cache_empty_ttl_sec: int = Field(604800)  # 7 days in seconds
-    aerodatabox_api_call_interval: float = Field(1.5)
+    aerodatabox_api_call_interval: float = Field(0.334)
     aerodatabox_window_hours: int = Field(12)
     debug_flight_service: bool = Field(True)
 
